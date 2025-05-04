@@ -61,6 +61,7 @@
         "optional": "cpp",
         "sstream": "cpp",
         "unordered_map": "cpp",
-        "algorithm": "cpp"
+        "algorithm": "cpp",
+        "iomanip": "cpp"
     }
 }
