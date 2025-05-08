@@ -39,33 +39,26 @@ int main() {
         int current_length = 1000 - static_cast<int>(i * length_step);
         database.push_back(generate_random_dna(current_length));
     }
-
-    //Actyallly run the parallel version
-    // std::vector<SWResult> results = smith_waterman_parallel(
-    //     query, database, 
-    //     1, -1, -2,
-    //     8
-    // );
-
-    // std::string refA = generate_random_dna(1000);
-    // std::string refB = generate_random_dna(1000);
-    // std::pair<std::vector<std::vector<int>>, std::pair<int,int>> sw_par = SmithWatermanWavefront(refA, refB, -1, 1, -2, 10);
+    std::cout << "Database generated "<< "\n";
 
     //#################  Sanity check that diagonal wavefront works  #######################
     int succ = 0;
-    for (size_t i = 10; i < 14; ++i) {
+    for (size_t i = 10; i < 11; ++i) {
         std::string refA = generate_random_dna(1<<i);
         std::string refB = generate_random_dna(1<<i);
+        std::cout << "DNA sequences generated."<< "\n";
 
         auto start_seq = std::chrono::high_resolution_clock::now();
         auto sw_seq = smith_waterman_dp(refA, refB, -1, 1, -2);
         auto end_seq = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double> duration_seq = end_seq - start_seq;
+        std::cout << "Sequential implementation finished."<< "\n";
 
         auto start_par = std::chrono::high_resolution_clock::now();
-        auto sw_par = SmithWatermanWavefront(refA, refB, -1, 1, -2, 1000);
+        auto sw_par = SmithWatermanWavefront(refA, refB, -1, 1, -2, 8);
         auto end_par = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double> duration_par = end_par - start_par;
+        std::cout << "Parallel implementation finished."<< "\n";
 
         succ = CheckSWWavefront(sw_seq, sw_par);
         if (succ == -1) {
@@ -77,7 +70,7 @@ int main() {
         double t_par = duration_par.count();
         double speedup = t_seq / t_par;
 
-        std::cout << "Length: " << i << "\n";
+        std::cout << "Length: " << (1<<i) << "\n";
         std::cout << "Sequential time: " << t_seq << " sec\n";
         std::cout << "Parallel time: " << t_par << " sec\n";
         std::cout << "Speedup:  " << speedup << "x\n\n";

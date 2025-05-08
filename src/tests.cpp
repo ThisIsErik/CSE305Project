@@ -29,12 +29,13 @@ int CheckSWWavefront(
         return -1;
     }
 
-    // if (pos_seq != pos_par) {
-    //     std::cerr << "Fail: Max positions different\n"
-    //               << "  Seq: (" << pos_seq.first << "," << pos_seq.second << ")\n"
-    //               << "  Par: (" << pos_par.first << "," << pos_par.second << ")\n";
-    //     return -1;
-    // } 
+    if (pos_seq != pos_par) {
+         std::cerr << "Fail: Max positions different\n"
+                   << "  Seq: (" << pos_seq.first << "," << pos_seq.second << ")\n"
+                   << "  Par: (" << pos_par.first << "," << pos_par.second << ")\n";
+         return -1;
+     } 
+     
     else if (dp_seq[pos_seq.first][pos_seq.second] != dp_par[pos_par.first][pos_par.second]) {
         std::cerr << "Fail: Max values different\n"
                   << "  Seq val: " << dp_seq[pos_seq.first][pos_seq.second] << "\n"

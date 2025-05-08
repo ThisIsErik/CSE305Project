@@ -2,8 +2,15 @@
 #include <thread>
 #include <mutex>
 #include <algorithm>
+#include <string>
+#include <iostream>
 
 typedef std::pair<std::vector<std::vector<int>>, std::pair<int, int>> SWResult;
+struct LocalMax {
+    int val = 0;
+    int i = 0;
+    int j = 0;
+};
 
 void AntiDiagonalAux(
     const std::string& A,
@@ -13,9 +20,7 @@ void AntiDiagonalAux(
     int start_i,
     int end_i,
     std::vector<std::vector<int>>& dp,
-    int& max_val,
-    std::pair<int, int>& max_pos,
-    std::mutex& max_mutex
+    LocalMax& local_max
 ) {
     int m = A.size();
     int n = B.size();
@@ -32,10 +37,10 @@ void AntiDiagonalAux(
         });
         dp[i][j] = val;
 
-        std::lock_guard<std::mutex> lock(max_mutex);
-        if (val > max_val) {
-                max_val = val;
-                max_pos = {i, j};
+        if (val > local_max.val || (val == local_max.val && std::make_pair(i, j) > std::make_pair(local_max.i, local_max.j))) {
+            local_max.val = val;
+            local_max.i = i;
+            local_max.j = j;
         }
     }
 }
@@ -52,7 +57,10 @@ SWResult SmithWatermanWavefront(
 
     int max_val = 0;
     std::pair<int, int> max_pos = {0, 0};
-    std::mutex max_mutex;
+
+    std::vector<LocalMax> local_maxes(num_threads); 
+    std::vector<std::thread> workers;
+    workers.reserve(num_threads);
 
     //For each antidiagonal
     for (int d = 1; d <= m + n; ++d) {
@@ -61,36 +69,47 @@ SWResult SmithWatermanWavefront(
         int i_end = std::min(m, d - 1);
         int num_cells = i_end - i_start + 1;
 
-        // if (num_cells < num_threads * 2) {
-        //     AntiDiagonalAux(A, B, mi, ma, g, d, i_start, i_end, dp, max_val, max_pos, max_mutex);
-        //     continue;
-        // }
+        if (num_cells < static_cast<int>(num_threads * 2)) {
+            LocalMax local;
+            AntiDiagonalAux(A, B, mi, ma, g, d, i_start, i_end, dp, local);
+            if (local.val > max_val) {
+                max_val = local.val;
+                max_pos = {local.i, local.j};
+            }
+            continue;
+        }
 
-                // Split work across threads
+        workers.clear();
+        // Split work across threads
         int block_size = num_cells / num_threads;
-        std::vector<std::thread> workers(num_threads - 1);
 
         int current_i = i_start;
         for (size_t i = 0; i < num_threads - 1; ++i) {
             int block_end = current_i + block_size;
-            workers[i] = std::thread(
+            workers.emplace_back(
                 AntiDiagonalAux,
                 std::ref(A), std::ref(B),
                 mi, ma, g,
                 d,
                 current_i, block_end,
                 std::ref(dp),
-                std::ref(max_val), std::ref(max_pos),
-                std::ref(max_mutex)
+                std::ref(local_maxes[i])
             );
             current_i = block_end + 1;
         }
 
-        AntiDiagonalAux(A, B, mi, ma, g, d, current_i, i_end, dp, max_val, max_pos, max_mutex);
+        AntiDiagonalAux(A, B, mi, ma, g, d, current_i, i_end, dp, local_maxes[num_threads - 1]); 
 
         //Sync all workers of this antidiagonal as next one depends on these values
         for (auto& t : workers) {
             t.join();
+        }
+
+        for (const auto& local : local_maxes) {
+            if (local.val > max_val || (local.val == max_val && std::make_pair(local.i, local.j) > max_pos)) {
+                max_val = local.val;
+                max_pos = {local.i, local.j};
+            }
         }
     }
 

@@ -28,7 +28,7 @@ std::pair<std::vector<std::vector<int>>, std::pair<int, int>> smith_waterman_dp(
                 dp[i - 1][j] + g,
                 0
             });
-            if (dp[i][j] > maxval) {
+            if (dp[i][j] > maxval || (dp[i][j] == maxval && std::make_pair(i, j) > std::make_pair(maxi, maxj))) {
                 maxval = dp[i][j];
                 maxi = i;
                 maxj = j;

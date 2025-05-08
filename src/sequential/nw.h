@@ -1,6 +1,7 @@
 #ifndef NW_H
 #define NW_H
 
+#include <vector>
 #include <string>
 
 std::vector<std::vector<int>> needleman_wunsh_dp(const std::string& seqA, const std::string& seqB, int mi, int ma, int g);

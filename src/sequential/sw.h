@@ -1,6 +1,7 @@
 #ifndef SW_H
 #define SW_H
 
+#include <vector>
 #include <string>
 
 std::pair<std::vector<std::vector<int>>, std::pair<int, int>> smith_waterman_dp(const std::string& A, const std::string& B, int mi, int ma, int g);

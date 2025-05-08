@@ -8,6 +8,12 @@
 
 typedef std::pair<std::vector<std::vector<int>>, std::pair<int, int>> SWResult;
 
+struct LocalMax {
+    int val = 0;
+    int i = 0;
+    int j = 0;
+};
+
 void AntiDiagonalAux(
     const std::string& A,
     const std::string& B,
@@ -16,9 +22,7 @@ void AntiDiagonalAux(
     int start_i,
     int end_i,
     std::vector<std::vector<int>>& dp,
-    int& max_val,
-    std::pair<int, int>& max_pos,
-    std::mutex& max_mutex
+    LocalMax& local_max
 );
 
 SWResult SmithWatermanWavefront(
