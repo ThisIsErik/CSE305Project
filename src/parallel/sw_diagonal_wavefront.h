@@ -5,7 +5,7 @@
 #include <string>
 #include <utility>
 #include <mutex>
-#include "local_max.h"
+#include "types.h"
 
 void AntiDiagonalAux_ScoreOnly(
     const std::string& A,

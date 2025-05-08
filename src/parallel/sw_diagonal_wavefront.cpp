@@ -4,7 +4,7 @@
 #include <algorithm>
 #include <string>
 #include <iostream>
-#include "local_max.h"
+#include "types.h"
 
 
 void AntiDiagonalAux(

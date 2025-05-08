@@ -7,7 +7,7 @@
 #include <algorithm>
 
 #include "../sequential/sw.h" // smith_waterman_dp
-#include "local_max.h"
+#include "types.h"
 
 void SWWorker(
     std::vector<std::string>::const_iterator begin,

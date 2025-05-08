@@ -4,7 +4,7 @@
 #include <string>
 #include <tuple>
 #include <vector>
-#include "local_max.h"
+#include "types.h"
 
 void AntiDiagonalAux_ScoreOnly(
     const std::string& A,
