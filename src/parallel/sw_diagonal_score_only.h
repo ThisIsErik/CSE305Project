@@ -1,10 +1,9 @@
-#ifndef SW_WF_H
-#define SW_WF_H
+#ifndef SW_DIAGONAL_SCORE_ONLY
+#define SW_DIAGONAL_SCORE_ONLY
 
-#include <vector>
 #include <string>
-#include <utility>
-#include <mutex>
+#include <tuple>
+#include <vector>
 #include "local_max.h"
 
 void AntiDiagonalAux_ScoreOnly(
@@ -16,17 +15,17 @@ void AntiDiagonalAux_ScoreOnly(
     int end_i,
     const std::vector<int>& prev_diag,
     const std::vector<int>& prev_prev_diag,
-    int prev_i_start,
-    int prev_prev_i_start,
     std::vector<int>& curr_diag,
     LocalMax& local_max
 );
 
-SWResult SmithWatermanWavefront(
+std::tuple<int, int, int> SmithWatermanWavefront_ScoreOnly(
     const std::string& A,
     const std::string& B,
-    int mi, int ma, int g,
-    size_t num_threads
+    int mismatch_penalty,
+    int match_award,
+    int gap_penalty,
+    size_t num_threads = 1
 );
 
-#endif 
+#endif // SW_DIAGONAL_SCORE_ONLY

@@ -45,4 +45,31 @@ int CheckSWWavefront(
     return 0;
 }
 
+int CheckSWWavefront_ScoreOnly(
+    const SWResult& sw_full,
+    const std::tuple<int, int, int>& sw_score_only
+) {
+    const auto& dp = sw_full.first;
+    const auto& pos = sw_full.second;
+    int full_score = dp[pos.first][pos.second];
 
+    const int score = std::get<0>(sw_score_only);
+    const int pos_i = std::get<1>(sw_score_only);
+    const int pos_j = std::get<2>(sw_score_only);
+
+    if (full_score != score) {
+        std::cerr << "Fail: Scores differ\n"
+                  << "  Full matrix score: " << full_score << "\n"
+                  << "  Score-only result: " << score << "\n";
+        return -1;
+    }
+
+    if (pos.first != pos_i || pos.second != pos_j) {
+        std::cerr << "Fail: Max positions differ\n"
+                  << "  Full matrix position: (" << pos.first << ", " << pos.second << ")\n"
+                  << "  Score-only position: (" << pos_i << ", " << pos_j << ")\n";
+        return -1;
+    }
+
+    return 0;
+}

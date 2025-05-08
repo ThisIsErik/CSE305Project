@@ -8,6 +8,7 @@
 typedef std::pair<std::vector<std::vector<int>>, std::pair<int, int>> SWResult;
 
 int CheckSWWavefront(const SWResult& sw_seq, const SWResult& sw_par);
+int CheckSWWavefront_ScoreOnly(const SWResult& sw_seq, const std::tuple<int, int, int>& sw_par);
 
 
 template <typename T>

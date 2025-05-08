@@ -4,9 +4,7 @@
 #include <vector>
 #include <string>
 #include <utility>
-
-
-typedef std::pair<std::vector<std::vector<int>>, std::pair<int, int>> SWResult;
+#include "local_max.h"
 
 std::vector<SWResult> smith_waterman_parallel(
     const std::string& query,

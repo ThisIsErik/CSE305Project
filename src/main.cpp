@@ -5,6 +5,7 @@
 #include "sequential/sw.h"
 #include "parallel/sw_parallel_database.h"
 #include "parallel/sw_diagonal_wavefront.h"
+#include "parallel/sw_diagonal_score_only.h"
 #include "tests.h"
 #include <vector>
 #include <iomanip>
@@ -43,6 +44,7 @@ int main() {
 
     //#################  Sanity check that diagonal wavefront works  #######################
     int succ = 0;
+    int succ_scoreonly = 0;
     for (size_t i = 10; i < 11; ++i) {
         std::string refA = generate_random_dna(1<<i);
         std::string refB = generate_random_dna(1<<i);
@@ -60,19 +62,28 @@ int main() {
         std::chrono::duration<double> duration_par = end_par - start_par;
         std::cout << "Parallel implementation finished."<< "\n";
 
+        auto start_par_scoreonly = std::chrono::high_resolution_clock::now();
+        auto [score, pos_i, pos_j] = SmithWatermanWavefront_ScoreOnly(refA, refB, -1, 1, -2, 8);
+        auto end_par_scoreonly = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double> duration_par_scoreonly = end_par_scoreonly - start_par_scoreonly;
+        std::cout << "Parallel (score only) implementation finished."<< "\n";
+
         succ = CheckSWWavefront(sw_seq, sw_par);
-        if (succ == -1) {
+        succ_scoreonly = CheckSWWavefront_ScoreOnly(sw_seq, std::make_tuple(score, pos_i, pos_j));
+        if (succ == -1 || succ_scoreonly == -1) {
             std::cerr << "Test failed for sequences of length " << i << "\n";
             break;
         }
 
         double t_seq = duration_seq.count();
         double t_par = duration_par.count();
+        double t_par_scoreonly = duration_par_scoreonly.count();
         double speedup = t_seq / t_par;
 
         std::cout << "Length: " << (1<<i) << "\n";
         std::cout << "Sequential time: " << t_seq << " sec\n";
         std::cout << "Parallel time: " << t_par << " sec\n";
+        std::cout << "Parallel time (score only): " << t_par_scoreonly << " sec\n";
         std::cout << "Speedup:  " << speedup << "x\n\n";
     }
 

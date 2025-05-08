@@ -4,13 +4,8 @@
 #include <algorithm>
 #include <string>
 #include <iostream>
+#include "local_max.h"
 
-typedef std::pair<std::vector<std::vector<int>>, std::pair<int, int>> SWResult;
-struct LocalMax {
-    int val = 0;
-    int i = 0;
-    int j = 0;
-};
 
 void AntiDiagonalAux(
     const std::string& A,
