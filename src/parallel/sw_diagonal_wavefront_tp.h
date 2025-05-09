@@ -1,5 +1,5 @@
-#ifndef SW_WF_H
-#define SW_WF_H
+#ifndef SW_WF_TP
+#define SW_WF_TP
 
 #include <vector>
 #include <string>
@@ -7,7 +7,7 @@
 #include <mutex>
 #include "types.h"
 
-void AntiDiagonalAux(
+void AntiDiagonalAuxTp(
     const std::string& A,
     const std::string& B,
     int mi, int ma, int g,
@@ -22,7 +22,7 @@ void AntiDiagonalAux(
     LocalMax& local_max
 );
 
-SWResult SmithWatermanWavefront(
+SWResult SmithWatermanWavefrontTp(
     const std::string& A,
     const std::string& B,
     int mi, int ma, int g,

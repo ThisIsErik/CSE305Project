@@ -10,5 +10,6 @@ struct LocalMax {
     int j = 0;
 };
 typedef std::pair<std::vector<std::vector<int>>, std::pair<int, int>> SWResult;
+constexpr int THRESHOLD = 2000; //TUNE HERE 
 
 #endif // LOCAL_MAX_H
