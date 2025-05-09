@@ -54,8 +54,7 @@ SWResult SmithWatermanWavefront(
     std::pair<int, int> max_pos = {0, 0};
 
     std::vector<LocalMax> local_maxes(num_threads); 
-    std::vector<std::thread> workers;
-    workers.reserve(num_threads);
+    std::vector<std::thread> workers(num_threads - 1);
 
     //For each antidiagonal
     for (int d = 1; d <= m + n; ++d) {
@@ -74,14 +73,13 @@ SWResult SmithWatermanWavefront(
             continue;
         }
 
-        workers.clear();
         // Split work across threads
         int block_size = num_cells / num_threads;
 
         int current_i = i_start;
         for (size_t i = 0; i < num_threads - 1; ++i) {
             int block_end = current_i + block_size;
-            workers.emplace_back(
+            workers[i] = std::thread(
                 AntiDiagonalAux,
                 std::ref(A), std::ref(B),
                 mi, ma, g,
