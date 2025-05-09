@@ -5,9 +5,10 @@
 #include <string>
 #include <iostream>
 #include "types.h"
+#include "thread_pool/thread_pool.h"
 
 
-void AntiDiagonalAux(
+void AntiDiagonalAuxTp(
     const std::string& A,
     const std::string& B,
     int mi, int ma, int g,
@@ -40,7 +41,7 @@ void AntiDiagonalAux(
     }
 }
 
-SWResult SmithWatermanWavefront(
+SWResult SmithWatermanWavefrontTp(
     const std::string& A,
     const std::string& B,
     int mi, int ma, int g,
@@ -55,10 +56,8 @@ SWResult SmithWatermanWavefront(
     std::pair<int, int> max_pos = {0, 0};
 
     std::vector<LocalMax> local_maxes(num_threads); 
-    std::vector<std::thread> workers(num_threads - 1);
-
-
-    //USE THREAD pool
+    dp::thread_pool pool(num_threads);
+    
     //For each antidiagonal
     for (int d = 1; d <= m + n; ++d) {
         
@@ -69,8 +68,13 @@ SWResult SmithWatermanWavefront(
 
         if (num_cells < THRESHOLD) {
             LocalMax local;
-            AntiDiagonalAux(A, B, mi, ma, g, d, i_start, i_end, dp, local);
-            if (local.val > max_val) {
+            auto task = [=, &A, &B, &dp, &local] {
+                AntiDiagonalAuxTp(A, B, mi, ma, g, d, i_start, i_end, dp, local);
+            };
+            pool.enqueue_detach(task);
+            pool.wait_for_tasks();
+            
+            if (local.val > max_val || (local.val == max_val && std::make_pair(local.i, local.j) > max_pos)) {
                 max_val = local.val;
                 max_pos = {local.i, local.j};
             }
@@ -79,28 +83,21 @@ SWResult SmithWatermanWavefront(
 
         // Split work across threads
         int block_size = num_cells / num_threads;
-
         int current_i = i_start;
         for (size_t i = 0; i < num_threads - 1; ++i) {
             int block_end = current_i + block_size;
-            workers[i] = std::thread(
-                AntiDiagonalAux,
-                std::ref(A), std::ref(B),
-                mi, ma, g,
-                d,
-                current_i, block_end,
-                std::ref(dp),
-                std::ref(local_maxes[i])
-            );
+            auto task = [=, &A, &B, &dp, &local_maxes] {
+                AntiDiagonalAuxTp(A, B, mi, ma, g, d, current_i, block_end, dp, local_maxes[i]);
+            };
+            pool.enqueue_detach(task);
             current_i = block_end + 1;
         }
 
-        AntiDiagonalAux(A, B, mi, ma, g, d, current_i, i_end, dp, local_maxes[num_threads - 1]); 
-
-        //Sync all workers of this antidiagonal as next one depends on these values
-        for (auto& t : workers) {
-            t.join();
-        }
+        auto task = [=, &A, &B, &dp, &local_maxes] {
+                AntiDiagonalAuxTp(A, B, mi, ma, g, d, current_i, i_end, dp, local_maxes[num_threads-1]);
+            };
+        pool.enqueue_detach(task);
+        pool.wait_for_tasks();
 
         for (const auto& local : local_maxes) {
             if (local.val > max_val || (local.val == max_val && std::make_pair(local.i, local.j) > max_pos)) {
