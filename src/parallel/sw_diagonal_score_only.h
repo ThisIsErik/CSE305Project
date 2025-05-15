@@ -15,6 +15,7 @@ void AntiDiagonalAux_ScoreOnly(
     int end_i,
     const std::vector<int>& prev_diag,
     const std::vector<int>& prev_prev_diag,
+    int wall_case,
     std::vector<int>& curr_diag,
     LocalMax& local_max
 );
