@@ -33,6 +33,8 @@ void AntiDiagonalAuxTp(
         });
         dp[i][j] = val;
 
+        // Always returns maximum value at largest position 
+        // (in case maximum value is attained in multiple places)
         if (val > local_max.val || (val == local_max.val && std::make_pair(i, j) > std::make_pair(local_max.i, local_max.j))) {
             local_max.val = val;
             local_max.i = i;
@@ -56,12 +58,15 @@ SWResult SmithWatermanWavefrontTp(
     std::pair<int, int> max_pos = {0, 0};
 
     std::vector<LocalMax> local_maxes(num_threads); 
+    // Threadpool reuses created threads by asigning 
+    // pending tasks to the ones that are free
     dp::thread_pool pool(num_threads);
     
-    //For each antidiagonal
+    // For each antidiagonal, we split in blocks 
+    // and complete the dp matrix
     for (int d = 1; d <= m + n; ++d) {
         
-        //Bounds for the curr antidiagonal
+        // Bounds for the current antidiagonal
         int i_start = std::max(1, d - n);
         int i_end = std::min(m, d - 1);
         int num_cells = i_end - i_start + 1;
@@ -97,6 +102,8 @@ SWResult SmithWatermanWavefrontTp(
                 AntiDiagonalAuxTp(A, B, mi, ma, g, d, current_i, i_end, dp, local_maxes[num_threads-1]);
             };
         pool.enqueue_detach(task);
+        // Wait for computations to finish before
+        // moving on to the next antidiagonal
         pool.wait_for_tasks();
 
         for (const auto& local : local_maxes) {
