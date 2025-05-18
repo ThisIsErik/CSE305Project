@@ -4,12 +4,11 @@
 #include <vector>
 #include <utility>
 #include <iomanip>
-
-typedef std::pair<std::vector<std::vector<int>>, std::pair<int, int>> SWResult;
+#include "utils/types.h"
 
 int CheckSWWavefront(const SWResult& sw_seq, const SWResult& sw_par);
-int CheckSWWavefront_ScoreOnly(const SWResult& sw_seq, const std::tuple<int, int, int>& sw_par);
-
+int Check_Matrix_Score(const SWResult& sw_seq, const SWResultScore& sw_score_only);
+int Check_Score_Score(const SWResultScore& result1, const SWResultScore& result2);
 
 template <typename T>
 void printMatrix(const std::vector<std::vector<T>>& matrix, 
