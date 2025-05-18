@@ -1,20 +1,22 @@
 CXX = g++
-NVCC = nvcc
+NVCC = /usr/local/cuda/bin/nvcc
 
-# Flags
+# Compiler flags
 CXXFLAGS = -std=c++20 -Wall -Wextra -Iexternal/thread-pool/include $(DEFINES)
-NVCCFLAGS = -std=c++20 -O2 -Iexternal/thread-pool/include
+CUDA_HOME ?= /usr/local/cuda
+ARCH = -arch=sm_60
+NVCCFLAGS = -std=c++20 -O2 -Iexternal/thread-pool/include -I$(CUDA_HOME)/include $(ARCH)
 
 # Sources
 SRC := $(wildcard src/*.cpp src/parallel/*.cpp src/sequential/*.cpp src/concurrent/*.cpp src/utils/*.cpp)
 CU_SRC := $(wildcard src/gpu/*.cu)
 
-# Objects
+# Object files
 OBJ_CPP := $(SRC:.cpp=.o)
 OBJ_CU := $(CU_SRC:.cu=.cu.o)
 OBJ_ALL := $(OBJ_CPP) $(OBJ_CU)
 
-# Output executables
+# Executables
 OUT = run
 CPU_OUT = run_cpu
 
@@ -22,17 +24,17 @@ CPU_OUT = run_cpu
 # Targets
 # ====================
 
-# Default GPU + CPU build
+# Full GPU + CPU build
 all: DEFINES = -DUSE_CUDA
 all: $(OUT)
 
-# CPU-only build (no CUDA)
+# CPU-only build (safe anywhere)
 cpu: $(OBJ_CPP)
 	$(CXX) $(CXXFLAGS) $(OBJ_CPP) -o $(CPU_OUT)
 
-# Link full build (with GPU)
+# Link everything with nvcc in the full build
 $(OUT): $(OBJ_ALL)
-	$(CXX) $(CXXFLAGS) $(OBJ_ALL) -o $(OUT)
+	$(NVCC) $(ARCH) $(OBJ_ALL) -o $(OUT)
 
 # Compile C++ files
 %.o: %.cpp
@@ -42,6 +44,6 @@ $(OUT): $(OBJ_ALL)
 %.cu.o: %.cu
 	$(NVCC) $(NVCCFLAGS) -c $< -o $@
 
-# Clean everything
+# Clean
 clean:
 	rm -f $(OUT) $(CPU_OUT) $(OBJ_ALL)

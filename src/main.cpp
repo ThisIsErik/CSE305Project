@@ -13,6 +13,10 @@
 #include <iomanip>
 #include <chrono>
 
+#ifdef USE_CUDA
+#include "gpu/CUDAlign.cuh"
+#endif
+
 
 int main() {
     std::string A = "TAGC";
@@ -47,7 +51,7 @@ int main() {
     //#################  Sanity check that diagonal wavefront works  #######################
     int succ = 0;
     int succ_scoreonly = 0;
-    for (size_t i = 15; i < 16; ++i) {
+    for (size_t i = 11; i < 12; ++i) {
         std::string refA = generate_random_dna(1<<i);
         std::string refB = generate_random_dna(1<<i);
         std::cout << "DNA sequences generated."<< "\n";
@@ -63,6 +67,10 @@ int main() {
         auto end_par = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double> duration_par = end_par - start_par;
         std::cout << "Parallel implementation finished."<< "\n";
+
+        #ifdef USE_CUDA
+        // call CUDA-related functions
+        #endif
 
         //auto start_par_scoreonly = std::chrono::high_resolution_clock::now();
         //auto [score, pos_i, pos_j] = SmithWatermanWavefront_ScoreOnly(refA, refB, -1, 1, -2, 8);
