@@ -1,4 +1,5 @@
 #pragma once
 #include <string>
+#include "utils/types.h"
 
-void CUDAlign(const std::string& A, const std::string& B, int mi, int ma, int g);
+SWResultScore CUDAlign(const std::string& A, const std::string& B, int mi, int ma, int g);
