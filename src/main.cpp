@@ -49,9 +49,10 @@ int main() {
     std::cout << "Database generated "<< "\n";
 
     //#################  Sanity check that diagonal wavefront works  #######################
-    int succ = 0;
+    int succ_par = 0;
+    int succ_cuda = 0;
     int succ_scoreonly = 0;
-    for (size_t i = 11; i < 12; ++i) {
+    for (size_t i = 13; i < 14; ++i) {
         std::string refA = generate_random_dna(1<<i);
         std::string refB = generate_random_dna(1<<i);
         std::cout << "DNA sequences generated."<< "\n";
@@ -83,27 +84,37 @@ int main() {
         //std::chrono::duration<double> duration_par_scoreonly = end_par_scoreonly - start_par_scoreonly;
         //std::cout << "Parallel (score only) implementation finished."<< "\n";
 
-        succ = CheckSWWavefront(sw_seq, sw_par);
+        succ_par = CheckSWWavefront(sw_seq, sw_par);
         // succ_scoreonly = CheckSWWavefront_ScoreOnly(sw_seq, std::make_tuple(score, pos_i, pos_j));
-        if (succ == -1) {
-            std::cerr << "Test failed for sequences of length " << i << "\n";
-            break;
+        if (succ_par == -1) {
+            std::cerr << "Test failed for parallel implementation" << i << "\n";
         }
 
         double t_seq = duration_seq.count();
         double t_par = duration_par.count();
-        double t_cuda = duration_cuda.count();
         // double t_par_scoreonly = duration_par_scoreonly.count();
         double speedup_par = t_seq / t_par;
+
+        #ifdef USE_CUDA
+        succ_cuda = Check_Matrix_Score(sw_seq, cuda_result);
+        if (succ_cuda == -1) {
+            std::cerr << "Test failed for cuda implementation" << i << "\n";
+        }
+        double t_cuda = duration_cuda.count();
         double speedup_cuda = t_seq/ t_cuda;
+        #endif
 
         std::cout << "Length: " << (1<<i) << "\n";
         std::cout << "Sequential time: " << t_seq << " sec\n";
         std::cout << "Parallel time: " << t_par << " sec\n";
+        #ifdef USE_CUDA
         std::cout << "Cuda time: " << t_cuda << " sec\n";
+        #endif
         // std::cout << "Parallel time (score only): " << t_par_scoreonly << " sec\n";
         std::cout << "Speedup parallel - sequential:  " << speedup_par << "x\n";
+        #ifdef USE_CUDA
         std::cout << "Speedup cuda - sequential:  " << speedup_cuda << "x\n";
+        #endif
     }
 
     return 0;
