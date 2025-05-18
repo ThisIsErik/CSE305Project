@@ -4,7 +4,7 @@
 #include <tuple>
 #include "utils/types.h"
 
-int CheckSWWavefront(
+int Check_Matrix_Matrix(
     const SWResult& sw_seq,
     const SWResult& sw_par
 ) {
