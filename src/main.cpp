@@ -70,6 +70,11 @@ int main() {
 
         #ifdef USE_CUDA
         // call CUDA-related functions
+        auto start_cuda = std::chrono::high_resolution_clock::now();
+        auto cuda_result = CUDAlign(refA, refB, -1, 1, -2);
+        auto end_cuda = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double> duration_cuda = end_cuda - start_cuda;
+        std::cout << "CUDA implementation finished."<< "\n";
         #endif
 
         //auto start_par_scoreonly = std::chrono::high_resolution_clock::now();
@@ -87,14 +92,18 @@ int main() {
 
         double t_seq = duration_seq.count();
         double t_par = duration_par.count();
+        double t_cuda = duration_cuda.count();
         // double t_par_scoreonly = duration_par_scoreonly.count();
-        double speedup = t_seq / t_par;
+        double speedup_par = t_seq / t_par;
+        double speedup_cuda = t_seq/ t_cuda;
 
         std::cout << "Length: " << (1<<i) << "\n";
         std::cout << "Sequential time: " << t_seq << " sec\n";
         std::cout << "Parallel time: " << t_par << " sec\n";
+        std::cout << "Cuda time: " << t_cuda << " sec\n";
         // std::cout << "Parallel time (score only): " << t_par_scoreonly << " sec\n";
-        std::cout << "Speedup:  " << speedup << "x\n\n";
+        std::cout << "Speedup parallel - sequential:  " << speedup_par << "x\n";
+        std::cout << "Speedup cuda - sequential:  " << speedup_cuda << "x\n";
     }
 
     return 0;

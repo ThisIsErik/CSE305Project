@@ -7,7 +7,7 @@
 #include <algorithm>
 
 #include "../sequential/sw.h" // smith_waterman_dp
-#include "types.h"
+#include "utils/types.h"
 
 void SWWorker(
     std::vector<std::string>::const_iterator begin,

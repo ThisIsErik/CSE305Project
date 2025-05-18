@@ -4,6 +4,7 @@
 #include <math.h>
 #include "CUDAlign.cuh"
 #include <cuda_runtime.h>
+#include "utils/types.h"
 
 __device__ __host__ inline int get_index(int i, int j, int n) {
     return i * (n + 1) + j;
@@ -18,7 +19,9 @@ void CUDAlignAux(int* dp,
     int rows, int columns, 
     int BIG_ROWS, int BIG_COLUMNS,
     int m, int n,
-    int alpha) {
+    int alpha,
+    int* max_val,
+    int* max_pos) {
     if (blockIdx.x <= external_diagonal && external_diagonal - blockIdx.x < BIG_ROWS){
         // in big grid, this block will treat the big cell indexed G_(external_diagonal-blockIdx, blockIdx)
         int topLeft_i = (external_diagonal-blockIdx.x)*rows;
@@ -45,6 +48,12 @@ void CUDAlignAux(int* dp,
                     dp[get_index(i, j + 1, n)] + g),
                     0);
                     dp[get_index(i + 1, j + 1, n)] = val;
+
+                    int old_max = atomicMax(max_val, val);
+                    if (val > old_max) {
+                        max_pos[0] = i + 1;
+                        max_pos[1] = j + 1;
+}
                 }
             }
             __syncthreads(); // sync all threads within the block before moving on to the next internal diagonal
@@ -52,7 +61,7 @@ void CUDAlignAux(int* dp,
     }
 }
 
-void CUDAlign(
+SWResultScore CUDAlign(
     const std::string& A,
     const std::string& B,
     int mi, int ma, int g
@@ -63,10 +72,15 @@ void CUDAlign(
 
     const int m = static_cast<int>(A.size());
     const int n = static_cast<int>(B.size());
-    int* dp = new int[(m + 1) * (n + 1)]();
 
-    // int max_val = 0;
-    // std::pair<int, int> max_pos = {0, 0};
+    int host_max_val = 0;
+    int host_max_pos[2] = {0, 0};
+    int* dev_max_val;
+    int* dev_max_pos;
+    cudaMalloc(&dev_max_val, sizeof(int));
+    cudaMalloc(&dev_max_pos, 2 * sizeof(int));
+    cudaMemcpy(dev_max_val, &host_max_val, sizeof(int), cudaMemcpyHostToDevice);
+    cudaMemcpy(dev_max_pos, host_max_pos, 2 * sizeof(int), cudaMemcpyHostToDevice);
 
     const size_t BIG_COLUMNS = BLOCKS_NUM; // B
     const size_t BIG_ROWS = m/(THREADS_PER_BLOCK * ROWS_PER_THREAD); // m/(alpha*T)
@@ -77,7 +91,7 @@ void CUDAlign(
     // moving the data to device 
     int* dpd;
     cudaMalloc(&dpd, (m + 1) * (n + 1) * sizeof(int));
-    cudaMemcpy(dpd, dp, (m + 1) * (n + 1) * sizeof(int), cudaMemcpyHostToDevice);
+    cudaMemset(dpd, 0, (m + 1) * (n + 1) * sizeof(int));
 
     char* A_dev;
     char* B_dev;
@@ -96,15 +110,24 @@ void CUDAlign(
             rows, columns,
             BIG_ROWS, BIG_COLUMNS,
             m, n,
-            alpha
+            alpha,
+            dev_max_val,
+            dev_max_pos
         );
     }
 
     // copying the result back
-    cudaMemcpy(dp, dpd, (m + 1) * (n + 1) * sizeof(int), cudaMemcpyDeviceToHost);
+    cudaMemcpy(&host_max_val, dev_max_val, sizeof(int), cudaMemcpyDeviceToHost);
+    cudaMemcpy(host_max_pos, dev_max_pos, 2 * sizeof(int), cudaMemcpyDeviceToHost);
+    std::cout << "Max value: " << host_max_val << " at (" << host_max_pos[0] << ", " << host_max_pos[1] << ")\n";
+
     cudaFree(dpd);
     cudaFree(A_dev);
     cudaFree(B_dev);
+    cudaFree(dev_max_val);
+    cudaFree(dev_max_pos);
+
+    return {host_max_val, host_max_pos[0], host_max_pos[1]};
 }
 
 // //----------------------------------------------------
