@@ -84,7 +84,7 @@ int main() {
         //std::chrono::duration<double> duration_par_scoreonly = end_par_scoreonly - start_par_scoreonly;
         //std::cout << "Parallel (score only) implementation finished."<< "\n";
 
-        succ_par = CheckSWWavefront(sw_seq, sw_par);
+        succ_par = Check_Matrix_Matrix(sw_seq, sw_par);
         // succ_scoreonly = CheckSWWavefront_ScoreOnly(sw_seq, std::make_tuple(score, pos_i, pos_j));
         if (succ_par == -1) {
             std::cerr << "Test failed for parallel implementation" << i << "\n";

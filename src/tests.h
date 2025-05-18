@@ -6,7 +6,7 @@
 #include <iomanip>
 #include "utils/types.h"
 
-int CheckSWWavefront(const SWResult& sw_seq, const SWResult& sw_par);
+int Check_Matrix_Matrix(const SWResult& sw_seq, const SWResult& sw_par);
 int Check_Matrix_Score(const SWResult& sw_seq, const SWResultScore& sw_score_only);
 int Check_Score_Score(const SWResultScore& result1, const SWResultScore& result2);
 

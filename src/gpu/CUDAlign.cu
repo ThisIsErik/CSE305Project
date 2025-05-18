@@ -21,7 +21,7 @@ void CUDAlignAux(int* dp,
     int m, int n,
     int alpha,
     int* max_val,
-    int* max_pos) {
+    long long* max_pos) {
     if (blockIdx.x <= external_diagonal && external_diagonal - blockIdx.x < BIG_ROWS){
         // in big grid, this block will treat the big cell indexed G_(external_diagonal-blockIdx, blockIdx)
         int topLeft_i = (external_diagonal-blockIdx.x)*rows;
@@ -50,10 +50,16 @@ void CUDAlignAux(int* dp,
                     dp[get_index(i + 1, j + 1, n)] = val;
 
                     int old_max = atomicMax(max_val, val);
+                    long long pos_code = (static_cast<long long>(i + 1) << 32) | (j + 1);
+
                     if (val > old_max) {
-                        max_pos[0] = i + 1;
-                        max_pos[1] = j + 1;
-}
+                        *max_pos = pos_code;
+                    }
+                    else if (val == old_max) {
+                        atomicMax(reinterpret_cast<unsigned long long*>(max_pos),
+                                static_cast<unsigned long long>(pos_code));
+                    }
+                    
                 }
             }
             __syncthreads(); // sync all threads within the block before moving on to the next internal diagonal
@@ -74,13 +80,14 @@ SWResultScore CUDAlign(
     const int n = static_cast<int>(B.size());
 
     int host_max_val = 0;
-    int host_max_pos[2] = {0, 0};
+    long long host_max_pos = 0;
+
     int* dev_max_val;
-    int* dev_max_pos;
+    long long* dev_max_pos;
     cudaMalloc(&dev_max_val, sizeof(int));
-    cudaMalloc(&dev_max_pos, 2 * sizeof(int));
+    cudaMalloc(&dev_max_pos, sizeof(long long));
     cudaMemcpy(dev_max_val, &host_max_val, sizeof(int), cudaMemcpyHostToDevice);
-    cudaMemcpy(dev_max_pos, host_max_pos, 2 * sizeof(int), cudaMemcpyHostToDevice);
+    cudaMemcpy(dev_max_pos, &host_max_pos, sizeof(long long), cudaMemcpyHostToDevice);
 
     const size_t BIG_COLUMNS = BLOCKS_NUM; // B
     const size_t BIG_ROWS = m/(THREADS_PER_BLOCK * ROWS_PER_THREAD); // m/(alpha*T)
@@ -118,8 +125,10 @@ SWResultScore CUDAlign(
 
     // copying the result back
     cudaMemcpy(&host_max_val, dev_max_val, sizeof(int), cudaMemcpyDeviceToHost);
-    cudaMemcpy(host_max_pos, dev_max_pos, 2 * sizeof(int), cudaMemcpyDeviceToHost);
-    std::cout << "Max value: " << host_max_val << " at (" << host_max_pos[0] << ", " << host_max_pos[1] << ")\n";
+    cudaMemcpy(&host_max_pos, dev_max_pos, sizeof(long long), cudaMemcpyDeviceToHost);
+    int max_i = static_cast<int>(host_max_pos >> 32);
+    int max_j = static_cast<int>(host_max_pos & 0xFFFFFFFF);
+    // std::cout << "Max value: " << host_max_val << " at (" << max_i << ", " << max_j << ")\n";
 
     cudaFree(dpd);
     cudaFree(A_dev);
@@ -127,7 +136,7 @@ SWResultScore CUDAlign(
     cudaFree(dev_max_val);
     cudaFree(dev_max_pos);
 
-    return {host_max_val, host_max_pos[0], host_max_pos[1]};
+    return {host_max_val, max_i, max_j};
 }
 
 // //----------------------------------------------------
