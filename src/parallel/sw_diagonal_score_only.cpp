@@ -102,6 +102,11 @@ std::tuple<int, int, int> SmithWatermanWavefront_ScoreOnly(
         prev_diag = std::move(curr_diag);
         curr_diag.assign(len, 0);
 
+        for (const auto& elem : curr_diag) {
+            std::cout << elem << " ";
+        }
+        std::cout << std::endl;
+        
         if (len < static_cast<int>(num_threads * 2)) {
             LocalMax local;
             AntiDiagonalAux_ScoreOnly(A, B, mi, ma, g, d, i_start, i_end,
