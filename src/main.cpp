@@ -47,8 +47,8 @@ int main() {
     //#################  Sanity check that diagonal wavefront works  #######################
     int succ = 0;
     int succ_scoreonly = 0;
-    for (size_t i = 13; i < 16; ++i) {
-        for(size_t j=0; j < 1; ++j){
+    for (size_t i = 10; i < 16; ++i) {
+        for(size_t j=0; j < 3; ++j){
             std::string refA = generate_random_dna(1<<i);
             std::string refB = generate_random_dna(1<<i);
             std::cout << "DNA sequences generated."<< "\n";
@@ -68,7 +68,7 @@ int main() {
             // std::cout << "Parallel implementation finished."<< "\n";
 
             auto start_par_scoreonly = std::chrono::high_resolution_clock::now();
-            auto [score, pos_i, pos_j] = SmithWatermanWavefront_ScoreOnly(refA, refB, -1, 1, -2, 1);
+            auto [score, pos_i, pos_j] = SmithWatermanWavefront_ScoreOnly(refA, refB, -1, 1, -2, 8);
             auto end_par_scoreonly = std::chrono::high_resolution_clock::now();
             std::chrono::duration<double> duration_par_scoreonly = end_par_scoreonly - start_par_scoreonly;
             std::cout << "Parallel (score only) implementation finished. (score = " << score << ")\n";
