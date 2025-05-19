@@ -47,47 +47,50 @@ int main() {
     //#################  Sanity check that diagonal wavefront works  #######################
     int succ = 0;
     int succ_scoreonly = 0;
-    for (size_t i = 4; i < 5; ++i) {
-        std::string refA = generate_random_dna(1<<i);
-        std::string refB = generate_random_dna(1<<i);
-        std::cout << "DNA sequences generated."<< "\n";
+    for (size_t i = 13; i < 16; ++i) {
+        for(size_t j=0; j < 1; ++j){
+            std::string refA = generate_random_dna(1<<i);
+            std::string refB = generate_random_dna(1<<i);
+            std::cout << "DNA sequences generated."<< "\n";
 
-        auto start_seq = std::chrono::high_resolution_clock::now();
-        auto sw_seq = smith_waterman_dp(refA, refB, -1, 1, -2);
-        auto end_seq = std::chrono::high_resolution_clock::now();
-        std::chrono::duration<double> duration_seq = end_seq - start_seq;
-        std::cout << "Sequential implementation finished."<< "\n";
-        printAntidiagonals(sw_seq.first);
+            auto start_seq = std::chrono::high_resolution_clock::now();
+            auto sw_seq = smith_waterman_dp(refA, refB, -1, 1, -2);
+            auto end_seq = std::chrono::high_resolution_clock::now();
+            std::chrono::duration<double> duration_seq = end_seq - start_seq;
+            std::cout << "Sequential implementation finished. (score = " << sw_seq.first[sw_seq.second.first][sw_seq.second.second] << ")\n";
 
-        // auto start_par = std::chrono::high_resolution_clock::now();
-        // auto sw_par = SmithWatermanWavefrontTp(refA, refB, -1, 1, -2, 8);
-        // auto end_par = std::chrono::high_resolution_clock::now();
-        // std::chrono::duration<double> duration_par = end_par - start_par;
-        // std::cout << "Parallel implementation finished."<< "\n";
+            // printAntidiagonals(sw_seq.first);
 
-        auto start_par_scoreonly = std::chrono::high_resolution_clock::now();
-        auto [score, pos_i, pos_j] = SmithWatermanWavefront_ScoreOnly(refA, refB, -1, 1, -2, 8);
-        auto end_par_scoreonly = std::chrono::high_resolution_clock::now();
-        std::chrono::duration<double> duration_par_scoreonly = end_par_scoreonly - start_par_scoreonly;
-        std::cout << "Parallel (score only) implementation finished."<< "\n";
+            // auto start_par = std::chrono::high_resolution_clock::now();
+            // auto sw_par = SmithWatermanWavefrontTp(refA, refB, -1, 1, -2, 8);
+            // auto end_par = std::chrono::high_resolution_clock::now();
+            // std::chrono::duration<double> duration_par = end_par - start_par;
+            // std::cout << "Parallel implementation finished."<< "\n";
 
-        // succ = CheckSWWavefront(sw_seq, sw_par);
-        succ_scoreonly = CheckSWWavefront_ScoreOnly(sw_seq, std::make_tuple(score, pos_i, pos_j));
-        if (succ == -1) {
-            std::cerr << "Test failed for sequences of length " << i << "\n";
-            break;
+            auto start_par_scoreonly = std::chrono::high_resolution_clock::now();
+            auto [score, pos_i, pos_j] = SmithWatermanWavefront_ScoreOnly(refA, refB, -1, 1, -2, 1);
+            auto end_par_scoreonly = std::chrono::high_resolution_clock::now();
+            std::chrono::duration<double> duration_par_scoreonly = end_par_scoreonly - start_par_scoreonly;
+            std::cout << "Parallel (score only) implementation finished. (score = " << score << ")\n";
+
+            // succ = CheckSWWavefront(sw_seq, sw_par);
+            succ_scoreonly = CheckSWWavefront_ScoreOnly(sw_seq, std::make_tuple(score, pos_i, pos_j));
+            if (succ == -1) {
+                std::cerr << "Test failed for sequences of length " << i << "\n";
+                break;
+            }
+
+            double t_seq = duration_seq.count();
+            double t_par = duration_par_scoreonly.count();
+            double speedup = t_seq / t_par;
+
+            std::cout << "Length: " << (1<<i) << "\n";
+            std::cout << "Sequential time: " << t_seq << " sec\n";
+            std::cout << "Parallel time: " << t_par << " sec\n";
+            // std::cout << "Parallel time (score only): " << t_par_scoreonly << " sec\n";
+            std::cout << "Speedup:  " << speedup << "x\n\n";
         }
 
-        double t_seq = duration_seq.count();
-        double t_par = duration_par_scoreonly.count();
-        // double t_par_scoreonly = duration_par_scoreonly.count();
-        double speedup = t_seq / t_par;
-
-        std::cout << "Length: " << (1<<i) << "\n";
-        std::cout << "Sequential time: " << t_seq << " sec\n";
-        std::cout << "Parallel time: " << t_par << " sec\n";
-        // std::cout << "Parallel time (score only): " << t_par_scoreonly << " sec\n";
-        std::cout << "Speedup:  " << speedup << "x\n\n";
     }
 
     return 0;
