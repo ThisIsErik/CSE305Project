@@ -52,7 +52,7 @@ int main() {
     int succ_par = 0;
     int succ_cuda = 0;
     int succ_scoreonly = 0;
-    for (size_t length_seq= 10; length_seq < 11; ++length_seq) {
+    for (size_t length_seq= 16; length_seq < 17; ++length_seq) {
         for(size_t repetitions = 0; repetitions < 1; ++repetitions) {
             std::string refA = generate_random_dna(1<<length_seq);
             std::string refB = generate_random_dna(1<<length_seq);
@@ -104,7 +104,7 @@ int main() {
             #ifdef USE_CUDA
             succ_cuda = Check_Matrix_Score(sw_seq, cuda_result);
             if (succ_cuda == -1) {
-                std::cerr << "Test failed for cuda implementation" << i << "\n";
+                std::cerr << "Test failed for cuda implementation" << length_seq << "\n";
             }
             double t_cuda = duration_cuda.count();
             double speedup_cuda = t_seq/ t_cuda;
