@@ -1,5 +1,6 @@
 #include <iostream>
 #include "utils/random_dna.h"
+#include "utils/performance_test.h"
 //#include "utils/timing_utils.h"
 #include "sequential/nw.h"
 #include "sequential/sw.h"
@@ -115,6 +116,15 @@ int main() {
         #ifdef USE_CUDA
         std::cout << "Speedup cuda - sequential:  " << speedup_cuda << "x\n";
         #endif
+
+        std::cout << "Helper testing:\n";
+        auto [result, time] = function_test_timer(SmithWatermanWavefrontTp, refA, refB, -1, 1, -2, 8);
+        std::cout << time << "\n";
+        auto vec = function_test_threads(SmithWatermanWavefrontTp);
+        for(auto i: vec){
+            std::cout << i << " ";
+        }
+        std::cout << "\n";
     }
 
     return 0;
