@@ -4,5 +4,6 @@
 #include <string>
 
 std::string generate_random_dna(size_t length);
+std::string generate_similar_dna(size_t length, double similarity, const std::string& reference = "");
 
 #endif
