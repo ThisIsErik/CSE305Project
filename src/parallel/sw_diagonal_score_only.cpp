@@ -17,7 +17,8 @@ void AntiDiagonalAux_ScoreOnly(
     const std::vector<int>& prev_prev_diag,
     int wall_case,
     std::vector<int>& curr_diag,
-    LocalMax& local_max
+    LocalMax& local_max,
+    int global_i_start
 ) {
     int m = A.size();
     int n = B.size();
@@ -27,7 +28,7 @@ void AntiDiagonalAux_ScoreOnly(
         if (i <= 0 || i > m || j <= 0 || j > n)
             continue;
         
-        int diag_idx = i - start_i; 
+        int diag_idx = i - global_i_start; 
         int diag_left, diag_above;
         int diag_above_left;
 
@@ -60,7 +61,7 @@ void AntiDiagonalAux_ScoreOnly(
                 ? prev_diag[diag_above] + g 
                 : g),
             0
-        });
+        }); 
 
         curr_diag[diag_idx] = val;
 
@@ -72,7 +73,7 @@ void AntiDiagonalAux_ScoreOnly(
     }
 }
 
-std::tuple<int, int, int> SmithWatermanWavefront_ScoreOnly(
+SWResultScore SmithWatermanWavefront_ScoreOnly(
     const std::string& A,
     const std::string& B,
     int mi, int ma, int g,
@@ -102,12 +103,17 @@ std::tuple<int, int, int> SmithWatermanWavefront_ScoreOnly(
         prev_diag = std::move(curr_diag);
         curr_diag.assign(len, 0);
 
-        if (len < static_cast<int>(num_threads * 2)) {
+        // for (const auto& elem : prev_diag) {
+        //     std::cout << elem << " ";
+        // }
+        // std::cout << std::endl;
+        
+        if (len < static_cast<int>(num_threads * 100)) {
             LocalMax local;
             AntiDiagonalAux_ScoreOnly(A, B, mi, ma, g, d, i_start, i_end,
                                       prev_diag, prev_prev_diag,
                                       wall_case,
-                                      curr_diag, local);
+                                      curr_diag, local, i_start);
             if (local.val > max_val) {
                 max_val = local.val;
                 max_pos = {local.i, local.j};
@@ -129,7 +135,8 @@ std::tuple<int, int, int> SmithWatermanWavefront_ScoreOnly(
                 std::ref(prev_prev_diag),
                 wall_case,
                 std::ref(curr_diag),
-                std::ref(local_maxes[t])
+                std::ref(local_maxes[t]),
+                i_start
             );
             current_i = block_end + 1;
         }
@@ -137,7 +144,8 @@ std::tuple<int, int, int> SmithWatermanWavefront_ScoreOnly(
         AntiDiagonalAux_ScoreOnly(A, B, mi, ma, g, d, current_i, i_end,
                                   prev_diag, prev_prev_diag,
                                   wall_case,
-                                  curr_diag, local_maxes[num_threads - 1]);
+                                  curr_diag, local_maxes[num_threads - 1],
+                                  i_start);
 
         for (auto& t : workers)
             t.join();

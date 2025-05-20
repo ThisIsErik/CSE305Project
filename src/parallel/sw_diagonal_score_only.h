@@ -17,10 +17,11 @@ void AntiDiagonalAux_ScoreOnly(
     const std::vector<int>& prev_prev_diag,
     int wall_case,
     std::vector<int>& curr_diag,
-    LocalMax& local_max
+    LocalMax& local_max,
+    int global_i_start
 );
 
-std::tuple<int, int, int> SmithWatermanWavefront_ScoreOnly(
+SWResultScore SmithWatermanWavefront_ScoreOnly(
     const std::string& A,
     const std::string& B,
     int mismatch_penalty,
