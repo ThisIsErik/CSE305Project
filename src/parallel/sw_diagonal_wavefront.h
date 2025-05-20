@@ -5,7 +5,7 @@
 #include <string>
 #include <utility>
 #include <mutex>
-#include "types.h"
+#include "utils/types.h"
 
 void AntiDiagonalAux(
     const std::string& A,

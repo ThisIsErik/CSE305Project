@@ -4,7 +4,7 @@
 #include <string>
 #include <tuple>
 #include <vector>
-#include "types.h"
+#include "utils/types.h"
 
 void AntiDiagonalAux_ScoreOnly(
     const std::string& A,
@@ -21,7 +21,7 @@ void AntiDiagonalAux_ScoreOnly(
     int global_i_start
 );
 
-std::tuple<int, int, int> SmithWatermanWavefront_ScoreOnly(
+SWResultScore SmithWatermanWavefront_ScoreOnly(
     const std::string& A,
     const std::string& B,
     int mismatch_penalty,

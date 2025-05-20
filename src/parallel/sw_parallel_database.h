@@ -4,7 +4,7 @@
 #include <vector>
 #include <string>
 #include <utility>
-#include "types.h"
+#include "utils/types.h"
 
 std::vector<SWResult> smith_waterman_parallel(
     const std::string& query,

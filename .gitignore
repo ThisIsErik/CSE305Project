@@ -1,0 +1,17 @@
+*.o
+*.obj
+
+run
+run_cpu
+run.exe
+run_cpu.exe
+
+*.ptx
+*.cubin
+*.fatbin
+
+build/
+bin/
+
+.vscode/
+.DS_Store

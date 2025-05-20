@@ -1,10 +1,10 @@
 #include <iostream>
 #include <vector>
 #include <iomanip>
+#include <tuple>
+#include "utils/types.h"
 
-typedef std::pair<std::vector<std::vector<int>>, std::pair<int, int>> SWResult;
-
-int CheckSWWavefront(
+int Check_Matrix_Matrix(
     const SWResult& sw_seq,
     const SWResult& sw_par
 ) {
@@ -45,9 +45,9 @@ int CheckSWWavefront(
     return 0;
 }
 
-int CheckSWWavefront_ScoreOnly(
+int Check_Matrix_Score(
     const SWResult& sw_full,
-    const std::tuple<int, int, int>& sw_score_only
+    const SWResultScore& sw_score_only
 ) {
     const auto& dp = sw_full.first;
     const auto& pos = sw_full.second;
@@ -70,6 +70,37 @@ int CheckSWWavefront_ScoreOnly(
     //               << "  Score-only position: (" << pos_i << ", " << pos_j << ")\n";
     //     return -1;
     // }
+
+    return 0;
+}
+
+
+int Check_Score_Score(
+    const SWResultScore& result1,
+    const SWResultScore& result2
+) {
+
+    const int score1 = std::get<0>(result1);
+    const int pos_i1 = std::get<1>(result1);
+    const int pos_j1 = std::get<2>(result1);
+
+    const int score2 = std::get<0>(result2);
+    const int pos_i2 = std::get<1>(result2);
+    const int pos_j2 = std::get<2>(result2);
+
+    if (score1 != score2) {
+        std::cerr << "Fail: Scores differ\n"
+                  << "  Score of first input: " << score1 << "\n"
+                  << "  Score of second input: " << score2 << "\n";
+        return -1;
+    }
+
+    if (pos_i1 != pos_i2 || pos_j1 != pos_j2) {
+        std::cerr << "Fail: Max positions differ\n"
+                  << "  First input position: (" << pos_i1 << ", " << pos_j1 << ")\n"
+                  << "  Second input position: (" << pos_i2 << ", " << pos_j2 << ")\n";
+        return -1;
+    }
 
     return 0;
 }

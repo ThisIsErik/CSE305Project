@@ -4,7 +4,7 @@
 #include <algorithm>
 #include <string>
 #include <iostream>
-#include "types.h"
+#include "utils/types.h"
 
 
 void AntiDiagonalAux(

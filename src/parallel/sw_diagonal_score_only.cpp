@@ -4,7 +4,7 @@
 #include <algorithm>
 #include <string>
 #include <iostream>
-#include "types.h"
+#include "utils/types.h"
 
 void AntiDiagonalAux_ScoreOnly(
     const std::string& A,
@@ -73,7 +73,7 @@ void AntiDiagonalAux_ScoreOnly(
     }
 }
 
-std::tuple<int, int, int> SmithWatermanWavefront_ScoreOnly(
+SWResultScore SmithWatermanWavefront_ScoreOnly(
     const std::string& A,
     const std::string& B,
     int mi, int ma, int g,
