@@ -3,6 +3,7 @@
 //#include "utils/timing_utils.h"
 #include "sequential/nw.h"
 #include "sequential/sw.h"
+#include "sequential/mm.h"
 #include "parallel/sw_parallel_database.h"
 #include "parallel/sw_diagonal_wavefront_tp.h"
 
@@ -36,6 +37,13 @@ int main() {
     std::cout << "Smith-Waterman Score: " << sw_dp.first[sw_dp.second.first][sw_dp.second.second] << "\n";
     std::cout << "Aligned A: " << aligned.first << "\n";
     std::cout << "Aligned B: " << aligned.second << "\n";
+
+    // Myers-Miller
+    std::pair<std::string, std::string> mm_aligned = myers_miller(A, B, 1, -1, -2);
+    int mm_score = myers_miller_score(A, B, 1, -1, -2);
+    std::cout << "Myers-Miller Score: " << mm_score << "\n";
+    std::cout << "Aligned A: " << mm_aligned.first << "\n";
+    std::cout << "Aligned B: " << mm_aligned.second << "\n";
 
     //First parallel implementation. Create a dictionary of 1000 sequences of bases
     std::string query = generate_random_dna(1000);
