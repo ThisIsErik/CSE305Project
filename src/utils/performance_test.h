@@ -52,12 +52,35 @@ std::vector<double> function_test_threads(Func func, std::vector<int> num_thread
 // std::vector<double> function_test_size(Func func,
 //                                      std::vector<int> size_a = {1<<10, 1<<11, 1<<12, 1<<13, 1<<14, 1<<15}, 
 //                                      std::vector<int> size_b = {1<<10, 1<<11, 1<<12, 1<<13, 1<<14, 1<<15},
-//                                      size_t num_threads = 16) {
+//                                      size_t num_threads = -1) {
 //     std::vector<double> times;
 //     for(int i=0; i<size_a.length(); ++i){
-//             std::string A = generate_random_dna(size_a[i]);
-//             std::string B = generate_random_dna(size_b[i]);
-//         auto [result, time] = function_test_timer(func, A, B, -1, 1, -2, i);
+//         std::string A = generate_random_dna(size_a[i]);
+//         std::string B = generate_random_dna(size_b[i]);
+//         if(num_threads!=-1){
+//             auto [result, time] = function_test_timer(func, A, B, -1, 1, -2, num_threads);
+//         } else{
+//             auto [result, time] = function_test_timer(func, A, B, -1, 1, -2);
+//         }
+//         times.push_back(time);
+//     }
+//     return times;
+// }
+
+// template <typename Func>
+// std::vector<double> function_test_similarity(Func func,
+//                                     std::vector<double> similarity = {0,0.2,0.4,0.6,0.8,1.0},
+//                                     size_t num_threads = -1) {
+//     std::vector<double> times;
+//     size_t length = 1<<14;
+//     for(double i: similarity){
+//         std::string A = generate_random_dna(length);
+//         std::string B = generate_similar_dna(length, i, A);
+//         if(num_threads!=-1){
+//             auto [result, time] = function_test_timer(func, A, B, -1, 1, -2, num_threads);
+//         } else{
+//             auto [result, time] = function_test_timer(func, A, B, -1, 1, -2);
+//         }
 //         times.push_back(time);
 //     }
 //     return times;
