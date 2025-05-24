@@ -1,126 +1,120 @@
-#include "mm_diagonal_wavefront.h"
-#include <thread>
 #include <vector>
-#include <string>
+#include <thread>
+#include <mutex>
 #include <algorithm>
-#include <utility>
+#include <string>
+#include <iostream>
+#include "utils/types.h"
+#include "thread_pool/thread_pool.h"
+#include "mm_diagonal_wavefront_tp.h"
 
-void MMAntidiagonalAux(
+void FillAntiDiagonalMM(
     const std::string& A,
     const std::string& B,
-    int match, int mismatch, int gap,
+    int mi, int ma, int g,
     int diagonal,
     int start_i,
     int end_i,
-    std::vector<std::vector<int>>& forward_dp,
-    std::vector<std::vector<int>>& reverse_dp,
-    std::pair<int, int>& midpoint
+    std::vector<int>& prev,
+    std::vector<int>& curr
 ) {
     int m = A.size();
     int n = B.size();
-    int mid_a = m / 2;
 
     for (int i = start_i; i <= end_i; ++i) {
         int j = diagonal - i;
-        if (i < 0 || i > m || j < 0 || j > n) continue;
+        if (i < 0 || i > m || j < 0 || j > n)
+            continue;
 
-        // Forward pass
-        if (i <= mid_a && i > 0 && j > 0) {
-            int p = (A[i - 1] == B[j - 1]) ? match : mismatch;
-            forward_dp[i][j] = std::max({
-                forward_dp[i - 1][j - 1] + p,
-                forward_dp[i][j - 1] + gap,
-                forward_dp[i - 1][j] + gap
-            });
-        }
+        int score = (A[i - 1] == B[j - 1]) ? ma : mi;
 
-        // Reverse pass
-        if (i >= mid_a && i < m && j < n && i > 0 && j > 0) {
-            int rev_i = m - i;
-            int rev_j = n - j;
-            int p = (A[rev_i] == B[rev_j]) ? match : mismatch;
-            reverse_dp[rev_i][rev_j] = std::max({
-                reverse_dp[rev_i + 1][rev_j + 1] + p,
-                reverse_dp[rev_i][rev_j + 1] + gap,
-                reverse_dp[rev_i + 1][rev_j] + gap
-            });
+        int diag = (i > 0 && j > 0) ? prev[i - 1] + score : INT_MIN;
+        int up   = (i > 0) ? prev[i] + g : INT_MIN;
+        int left = (j > 0) ? curr[i - 1] + g : INT_MIN;
 
-            if (i == mid_a) {
-                int combined = forward_dp[mid_a][j] + reverse_dp[m - mid_a][n - j];
-                int current_best = forward_dp[mid_a][midpoint.second] + reverse_dp[m - mid_a][n - midpoint.second];
-                if (combined > current_best) {
-                    midpoint = {mid_a, j};
-                }
-            }
-        }
+        curr[i] = std::max({diag, up, left});
     }
 }
 
-MMResult MyersMillerWavefront(
+std::vector<int> NWScore(
     const std::string& A,
     const std::string& B,
-    int match, int mismatch, int gap,
+    int mi, int ma, int g,
     size_t num_threads
 ) {
-    int m = A.size(), n = B.size();
-    int mid_a = m / 2;
+    int m = A.size();
+    int n = B.size();
 
-    std::vector<std::vector<int>> forward_dp(m + 1, std::vector<int>(n + 1, 0));
-    std::vector<std::vector<int>> reverse_dp(m + 1, std::vector<int>(n + 1, 0));
+    std::vector<int> prev(m + 1, 0), curr(m + 1, 0);
+    for (int i = 0; i <= m; ++i)
+        prev[i] = i * g;
 
-    // Init forward matrix
-    for (int i = 0; i <= m; ++i) forward_dp[i][0] = i * gap;
-    for (int j = 0; j <= n; ++j) forward_dp[0][j] = j * gap;
+    dp::thread_pool pool(num_threads);
 
-    // Init reverse matrix (from m,n to mid)
-    for (int i = m; i >= 0; --i) reverse_dp[i][n] = (m - i) * gap;
-    for (int j = n; j >= 0; --j) reverse_dp[m][j] = (n - j) * gap;
-
-    std::pair<int, int> midpoint = {mid_a, 0};
-    std::vector<std::thread> workers(num_threads - 1);
-
-    for (int d = 2; d <= m + n; ++d) {
+    for (int d = 1; d <= m + n; ++d) {
         int i_start = std::max(1, d - n);
-        int i_end = std::min(m, d - 1);
+        int i_end = std::min(m, d);
+
         int num_cells = i_end - i_start + 1;
 
-        std::vector<std::pair<int, int>> thread_midpoints(num_threads, midpoint);
-
         if (num_cells < THRESHOLD) {
-            MMAntidiagonalAux(A, B, match, mismatch, gap, d, i_start, i_end,
-                              forward_dp, reverse_dp, midpoint);
-            continue;
-        }
+            FillAntiDiagonalMM(A, B, mi, ma, g, d, i_start, i_end, prev, curr);
+        } else {
+            int block_size = num_cells / num_threads;
+            int current_i = i_start;
 
-        int block_size = num_cells / num_threads;
-        int current_i = i_start;
+            for (size_t t = 0; t < num_threads; ++t) {
+                int block_end = (t == num_threads - 1) ? i_end : (current_i + block_size - 1);
 
-        for (size_t i = 0; i < num_threads - 1; ++i) {
-            int block_end = current_i + block_size;
-            workers[i] = std::thread(
-                MMAntidiagonalAux,
-                std::ref(A), std::ref(B),
-                match, mismatch, gap,
-                d, current_i, block_end,
-                std::ref(forward_dp), std::ref(reverse_dp),
-                std::ref(thread_midpoints[i])
-            );
-            current_i = block_end + 1;
-        }
+                pool.enqueue_detach([=, &A, &B, &prev, &curr]() {
+                    FillAntiDiagonalMM(A, B, mi, ma, g, d, current_i, block_end, prev, curr);
+                });
 
-        MMAntidiagonalAux(A, B, match, mismatch, gap, d, current_i, i_end,
-                          forward_dp, reverse_dp, thread_midpoints[num_threads - 1]);
-
-        for (auto& t : workers) t.join();
-
-        for (const auto& mp : thread_midpoints) {
-            int combined = forward_dp[mid_a][mp.second] + reverse_dp[m - mid_a][n - mp.second];
-            int best = forward_dp[mid_a][midpoint.second] + reverse_dp[m - mid_a][n - midpoint.second];
-            if (combined > best) {
-                midpoint = mp;
+                current_i = block_end + 1;
             }
+
+            pool.wait_for_tasks();
+        }
+
+        std::swap(prev, curr);
+    }
+
+    return prev;
+}
+
+// Recursive Myers-Miller core function (simplified to score only)
+MMResultScore MyersMillerWavefrontTp(
+    const std::string& A,
+    const std::string& B,
+    int mi, int ma, int g,
+    size_t num_threads
+) {
+    int m = A.size();
+    int n = B.size();
+
+    if (m == 0) return {n * g, 0, n};
+    if (n == 0) return {m * g, m, 0};
+
+    int mid = n / 2;
+
+    std::string B_left = B.substr(0, mid);
+    std::string B_right = B.substr(mid);
+
+    std::vector<int> score_l = NWScore(A, B_left, mi, ma, g, num_threads);
+    
+    std::string A_rev(A.rbegin(), A.rend());
+    std::string B_right_rev(B_right.rbegin(), B_right.rend());
+    std::vector<int> score_r = NWScore(A_rev, B_right_rev, mi, ma, g, num_threads);
+
+    int max_score = INT_MIN;
+    int split = 0;
+    for (int i = 0; i <= m; ++i) {
+        int total = score_l[i] + score_r[m - i];
+        if (total > max_score) {
+            max_score = total;
+            split = i;
         }
     }
 
-    return {std::move(forward_dp), midpoint};
+    return {max_score, split, mid};
 }
