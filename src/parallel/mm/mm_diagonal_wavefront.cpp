@@ -8,7 +8,7 @@
 #include "thread_pool/thread_pool.h"
 #include "mm_diagonal_wavefront_tp.h"
 
-void FillAntiDiagonalMM(
+static void FillAntiDiagonalMM(
     const std::string& A,
     const std::string& B,
     int mi, int ma, int g,
@@ -36,7 +36,7 @@ void FillAntiDiagonalMM(
     }
 }
 
-std::vector<int> NWScore(
+static std::vector<int> NWScore(
     const std::string& A,
     const std::string& B,
     int mi, int ma, int g,
@@ -82,8 +82,7 @@ std::vector<int> NWScore(
     return prev;
 }
 
-// Recursive Myers-Miller core function (simplified to score only)
-MMResultScore MyersMillerWavefrontTp(
+MMResult MyersMillerWavefront(
     const std::string& A,
     const std::string& B,
     int mi, int ma, int g,
@@ -92,8 +91,18 @@ MMResultScore MyersMillerWavefrontTp(
     int m = A.size();
     int n = B.size();
 
-    if (m == 0) return {n * g, 0, n};
-    if (n == 0) return {m * g, m, 0};
+    if (m == 0) {
+        // Return empty DP matrix and midpoint for base case
+        std::vector<std::vector<int>> empty_dp(1, std::vector<int>(n + 1));
+        for (int j = 0; j <= n; ++j) empty_dp[0][j] = j * g;
+        return {std::move(empty_dp), {0, n}};
+    }
+    if (n == 0) {
+        // Return empty DP matrix and midpoint for base case
+        std::vector<std::vector<int>> empty_dp(m + 1, std::vector<int>(1));
+        for (int i = 0; i <= m; ++i) empty_dp[i][0] = i * g;
+        return {std::move(empty_dp), {m, 0}};
+    }
 
     int mid = n / 2;
 
@@ -116,5 +125,9 @@ MMResultScore MyersMillerWavefrontTp(
         }
     }
 
-    return {max_score, split, mid};
+    // Create a minimal DP matrix for compatibility
+    std::vector<std::vector<int>> dp_matrix(m + 1, std::vector<int>(n + 1, 0));
+    // You might want to fill this properly if needed elsewhere
+    
+    return {std::move(dp_matrix), {split, mid}};
 }

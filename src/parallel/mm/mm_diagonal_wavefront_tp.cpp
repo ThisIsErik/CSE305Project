@@ -8,7 +8,7 @@
 #include "thread_pool/thread_pool.h"
 
 
-void FillAntiDiagonalMM(
+static void FillAntiDiagonalMM(
     const std::string& A,
     const std::string& B,
     int mi, int ma, int g,
@@ -86,7 +86,7 @@ void MMAntidiagonalAuxTp(
 }
 
 
-std::vector<int> NWScore(
+static std::vector<int> NWScore(
     const std::string& A,
     const std::string& B,
     int mi, int ma, int g,

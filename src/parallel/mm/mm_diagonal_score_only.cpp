@@ -56,7 +56,7 @@ void MMAntidiagonalAux_ScoreOnly(
 
         curr_diag[diag_idx] = val;
 
-        // If we are at the middle row, potentially update midpoint
+        // If we are at the middle row update midpoint
         if (i == mid_a) {
             if (midpoint.second == 0 || val > curr_diag[midpoint.second - start_i]) {
                 midpoint.second = j;
