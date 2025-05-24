@@ -9,6 +9,7 @@
 #include "parallel/sw_diagonal_wavefront.h"
 #include "parallel/sw_diagonal_score_only.h"
 #include "tests.h"
+#include "utils/performance_test.h"
 #include <vector>
 #include <iomanip>
 #include <chrono>
@@ -52,7 +53,7 @@ int main() {
     int succ_par = 0;
     int succ_cuda = 0;
     int succ_scoreonly = 0;
-    for (size_t length_seq= 16; length_seq < 17; ++length_seq) {
+    for (size_t length_seq= 13; length_seq < 14; ++length_seq) {
         for(size_t repetitions = 0; repetitions < 1; ++repetitions) {
             std::string refA = generate_random_dna(1<<length_seq);
             std::string refB = generate_random_dna(1<<length_seq);
@@ -122,8 +123,21 @@ int main() {
             #ifdef USE_CUDA
             std::cout << "Speedup cuda - sequential:  " << speedup_cuda << "x\n";
             #endif
+        }
     }
-}
+    /////////// Time performance tests ///////////////
+    auto timing = function_test_threads(SmithWatermanWavefrontTp, {1,2,4,8,16});
+    for(auto i: timing){
+        std::cout << i << " ";
+    }
+    std::cout << "\n";
+
+    auto timingscoreonly = function_test_size(SmithWatermanWavefront_ScoreOnly, {1<<10,1<<11,1<<12,1<<13,1<<14},{1<<10,1<<11,1<<12,1<<13,1<<14}, 8);
+    auto timingseq = function_test_size(smith_waterman_dp, {1<<10,1<<11,1<<12,1<<13,1<<14},{1<<10,1<<11,1<<12,1<<13,1<<14});
+    for(int i=0; i<timingseq.size(); ++i){
+        std::cout << timingseq[i]/timingscoreonly[i] << " ";
+    }
+    std::cout << "\n";
 
     return 0;
 }

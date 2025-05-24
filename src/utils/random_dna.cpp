@@ -1,5 +1,6 @@
 #include "../utils/random_dna.h"
 #include <random>
+#include <iostream>
 
 std::string generate_random_dna(size_t length) {
     const std::string bases = "ATCG";
@@ -68,9 +69,6 @@ std::string generate_similar_dna(size_t length, double similarity, const std::st
        std::shuffle(indices.begin(), indices.end(), gen);
        indices.resize(reference.length());
        std::sort(indices.begin(), indices.end());
-       for (auto i: indices)
-           std::cout << i << ' '; 
-       std::cout << "\n";
        int curr_index = 0;
        for(size_t i = 0; i<length; ++i){
            if(i==indices[curr_index]){ //need to do it (this is a copy index)

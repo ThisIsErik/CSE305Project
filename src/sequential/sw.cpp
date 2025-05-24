@@ -1,4 +1,4 @@
-#include "../sequential/nw.h"
+#include "../sequential/sw.h"
 #include <vector>
 #include <algorithm>
 #include <iostream>
