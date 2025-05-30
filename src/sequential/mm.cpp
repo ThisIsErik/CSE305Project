@@ -182,59 +182,55 @@ std::vector<int> reverse_score(
     return previous;
 }
 
-// Optional diagnostic/debug utility
-MMResult myers_miller_dp(
-    const std::string& A, 
-    const std::string& B, 
-    int mismatch, 
-    int match, 
+// Return DP matrix (for diagnostic purposes) and midpoint (as in SW-style)
+std::pair<std::vector<std::vector<int>>, std::pair<int, int>> myers_miller_dp(
+    const std::string& A,
+    const std::string& B,
+    int mismatch,
+    int match,
     int gap
 ) {
     int len_a = A.length();
     int len_b = B.length();
-    int mid_a = len_a / 2;
 
-    std::vector<std::vector<int>> fwd(len_a + 1, std::vector<int>(len_b + 1));
-    std::vector<std::vector<int>> rev(len_a + 1, std::vector<int>(len_b + 1));
+    std::vector<std::vector<int>> dp(len_a + 1, std::vector<int>(len_b + 1));
 
-    for (int i = 0; i <= len_a; ++i) fwd[i][0] = i * gap;
-    for (int j = 0; j <= len_b; ++j) fwd[0][j] = j * gap;
+    for (int i = 0; i <= len_a; ++i) dp[i][0] = i * gap;
+    for (int j = 0; j <= len_b; ++j) dp[0][j] = j * gap;
 
     for (int i = 1; i <= len_a; ++i) {
         for (int j = 1; j <= len_b; ++j) {
             int score = (A[i - 1] == B[j - 1]) ? match : mismatch;
-            fwd[i][j] = std::max({
-                fwd[i-1][j-1] + score,
-                fwd[i-1][j] + gap,
-                fwd[i][j-1] + gap
+            dp[i][j] = std::max({
+                dp[i-1][j-1] + score,
+                dp[i-1][j] + gap,
+                dp[i][j-1] + gap
             });
         }
     }
 
-    for (int i = 0; i <= len_a; ++i) rev[i][len_b] = (len_a - i) * gap;
-    for (int j = 0; j <= len_b; ++j) rev[len_a][j] = (len_b - j) * gap;
-
-    for (int i = len_a - 1; i >= 0; --i) {
-        for (int j = len_b - 1; j >= 0; --j) {
-            int score = (A[i] == B[j]) ? match : mismatch;
-            rev[i][j] = std::max({
-                rev[i+1][j+1] + score,
-                rev[i+1][j] + gap,
-                rev[i][j+1] + gap
-            });
+    // Find max score and position
+    int max_score = INT_MIN;
+    std::pair<int, int> max_pos = {0, 0};
+    for (int i = 0; i <= len_a; ++i) {
+        for (int j = 0; j <= len_b; ++j) {
+            if (dp[i][j] > max_score) {
+                max_score = dp[i][j];
+                max_pos = {i, j};
+            }
         }
     }
 
-    int best_score = INT_MIN;
-    int mid_j = 0;
+    return {dp, max_pos};
+}
 
-    for (int j = 0; j <= len_b; ++j) {
-        int score = fwd[mid_a][j] + rev[mid_a][j];
-        if (score > best_score) {
-            best_score = score;
-            mid_j = j;
-        }
-    }
-
-    return MMResult(std::move(fwd), {mid_a, mid_j});
+// Traceback using divide-and-conquer (returns aligned strings)
+std::pair<std::string, std::string> myers_miller_traceback(
+    const std::string& A,
+    const std::string& B,
+    int mismatch,
+    int match,
+    int gap
+) {
+    return myers_miller_recursive(A, B, 0, A.size(), 0, B.size(), match, mismatch, gap);
 }

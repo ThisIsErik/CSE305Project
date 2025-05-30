@@ -6,6 +6,24 @@
 #include <utility>
 #include "../utils/types.h"
 
+// Main API-compatible with SW
+std::pair<std::vector<std::vector<int>>, std::pair<int, int>> myers_miller_dp(
+    const std::string& A,
+    const std::string& B,
+    int mismatch,
+    int match,
+    int gap
+);
+
+std::pair<std::string, std::string> myers_miller_traceback(
+    const std::string& A,
+    const std::string& B,
+    int mismatch,
+    int match,
+    int gap
+);
+
+// Internals
 std::pair<std::string, std::string> myers_miller_recursive(
     const std::string& A,
     const std::string& B,
@@ -55,11 +73,4 @@ std::vector<int> reverse_score(
     int gap
 );
 
-MMResult myers_miller_dp(
-    const std::string& A,
-    const std::string& B,
-    int mismatch,
-    int match,
-    int gap
-);
 #endif

@@ -40,10 +40,16 @@ int main() {
     std::cout << "Aligned B: " << nw_aligned.second << "\n";
 
     std::pair<std::vector<std::vector<int>>, std::pair<int,int>> sw_dp = smith_waterman_dp(A, B, -1, 1, -2);
-    std::pair<std::string, std::string> aligned = smith_waterman_traceback(sw_dp.first, A, B, 1, -1, -2, sw_dp.second);
+    std::pair<std::string, std::string> sw_aligned = smith_waterman_traceback(sw_dp.first, A, B, 1, -1, -2, sw_dp.second);
     std::cout << "Smith-Waterman Score: " << sw_dp.first[sw_dp.second.first][sw_dp.second.second] << "\n";
-    std::cout << "Aligned A: " << aligned.first << "\n";
-    std::cout << "Aligned B: " << aligned.second << "\n";
+    std::cout << "Aligned A: " << sw_aligned.first << "\n";
+    std::cout << "Aligned B: " << sw_aligned.second << "\n";
+
+    std::pair<std::vector<std::vector<int>>, std::pair<int,int>> mm_dp = myers_miller_dp(A, B, -1, 1, -2);
+    std::pair<std::string, std::string> mm_aligned = myers_miller_traceback(A, B, 1, -1, -2);
+    std::cout << "Myers Miller Score: " << mm_dp.first[mm_dp.second.first][mm_dp.second.second] << "\n";
+    std::cout << "Aligned A: " << mm_aligned.first << "\n";
+    std::cout << "Aligned B: " << mm_aligned.second << "\n";
 
     //First parallel implementation. Create a dictionary of 1000 sequences of bases
     std::string query = generate_random_dna(1000);
@@ -74,7 +80,7 @@ int main() {
             std::cout << "Sequential SW implementation finished. (score = " << sw_seq.first[sw_seq.second.first][sw_seq.second.second] << ")\n";
 
             auto start_seq_mm = std::chrono::high_resolution_clock::now();
-            auto mm_seq = smith_waterman_dp(refA, refB, -1, 1, -2);
+            auto mm_seq = myers_miller_dp(refA, refB, -1, 1, -2);
             auto end_seq_mm = std::chrono::high_resolution_clock::now();
             std::chrono::duration<double> duration_seq_mm = end_seq_mm - start_seq_mm;
             std::cout << "Sequential MM implementation finished. (score = " << mm_seq.first[mm_seq.second.first][mm_seq.second.second] << ")\n";
@@ -199,7 +205,7 @@ int main() {
     std::cout << "\n";
 
     auto timingscoreonly2 = function_test_size(MyersMillerWavefront_ScoreOnly, {1<<10,1<<11,1<<12,1<<13,1<<14},{1<<10,1<<11,1<<12,1<<13,1<<14}, 8);
-    auto timingseq2 = function_test_size(myers_miller, {1<<10,1<<11,1<<12,1<<13,1<<14},{1<<10,1<<11,1<<12,1<<13,1<<14});
+    auto timingseq2 = function_test_size(myers_miller_traceback, {1<<10,1<<11,1<<12,1<<13,1<<14},{1<<10,1<<11,1<<12,1<<13,1<<14});
     for(int i=0; i<timingseq2.size(); ++i){
         std::cout << timingseq2[i]/timingscoreonly2[i] << " ";
     }
