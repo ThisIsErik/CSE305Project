@@ -99,7 +99,7 @@ int main() {
             std::chrono::duration<double> duration_cuda = end_cuda - start_cuda;
             std::cout << "CUDA implementation finished."<< "\n";
             #endif
-            
+
             auto start_par_scoreonly_sw = std::chrono::high_resolution_clock::now();
             auto sw_par_scoreonly = SmithWatermanWavefront_ScoreOnly(refA, refB, -1, 1, -2, 8);
             auto end_par_scoreonly_sw = std::chrono::high_resolution_clock::now();
@@ -110,7 +110,7 @@ int main() {
             auto mm_par_scoreonly = MyersMillerWavefront_ScoreOnly(refA, refB, -1, 1, -2, 8);
             auto end_par_scoreonly_mm = std::chrono::high_resolution_clock::now();
             std::chrono::duration<double> duration_par_scoreonly_mm = end_par_scoreonly_mm - start_par_scoreonly_mm;
-            std::cout << "Parallel SW (score only) implementation finished. << \n";
+            std::cout << "Parallel MM (score only) implementation finished. << \n";
             
 
             int succ_seq = Check_Matrix_Matrix(sw_seq, mm_seq);
@@ -119,7 +119,7 @@ int main() {
             }
             succ_par = Check_Matrix_Matrix(sw_seq, sw_par);
             if (succ_par == -1) {
-                std::cerr << "Test failed for parallel implementation" << length_seq << "\n";
+                std::cerr << "Test failed for SW parallel implementation" << length_seq << "\n";
             }
             succ_scoreonly_sw = Check_Matrix_Score(sw_seq, sw_par_scoreonly);
             if (succ_scoreonly_sw == -1) {
