@@ -22,6 +22,7 @@ int Check_Matrix_Matrix(
                         std::cerr << "  Mismatch at (" << i << "," << j << "): "
                                   << "Seq=" << dp_seq[i][j] << ", "
                                   << "Par=" << dp_par[i][j] << "\n";
+                        return -1;
                     }
                 }
             }
