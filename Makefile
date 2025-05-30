@@ -8,7 +8,7 @@ ARCH = -arch=sm_60
 NVCCFLAGS = -std=c++20 -O2 -Iexternal/thread-pool/include -I$(CUDA_HOME)/include -Isrc $(ARCH)
 
 # Sources
-SRC := $(wildcard src/*.cpp src/parallel/*.cpp src/sequential/*.cpp src/concurrent/*.cpp src/utils/*.cpp)
+SRC := $(wildcard src/*.cpp src/parallel/*.cpp src/sequential/*.cpp src/concurrent/*.cpp src/utils/*.cpp src/parallel/mm/*.cpp)
 CU_SRC := $(wildcard src/gpu/*.cu)
 
 # Object files
