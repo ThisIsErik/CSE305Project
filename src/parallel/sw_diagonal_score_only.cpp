@@ -5,6 +5,7 @@
 #include <string>
 #include <iostream>
 #include "utils/types.h"
+#include "thread_pool/thread_pool.h"
 
 void AntiDiagonalAux_ScoreOnly(
     const std::string& A,
