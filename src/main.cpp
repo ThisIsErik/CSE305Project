@@ -4,11 +4,17 @@
 #include "sequential/nw.h"
 #include "sequential/sw.h"
 #include "sequential/mm.h"
+
 #include "parallel/sw_parallel_database.h"
 #include "parallel/sw_diagonal_wavefront_tp.h"
-
 #include "parallel/sw_diagonal_wavefront.h"
 #include "parallel/sw_diagonal_score_only.h"
+
+#include "parallel/mm/mm_parallel_database.h"
+#include "parallel/mm/mm_diagonal_wavefront_tp.h"
+#include "parallel/mm/mm_diagonal_wavefront.h"
+#include "parallel/mm/mm_diagonal_score_only.h"
+
 #include "tests.h"
 #include "utils/performance_test.h"
 #include <vector>
@@ -53,7 +59,8 @@ int main() {
     //#################  Sanity check that diagonal wavefront works  #######################
     int succ_par = 0;
     int succ_cuda = 0;
-    int succ_scoreonly = 0;
+    int succ_scoreonly_sw = 0;
+    int succ_scoreonly_mm = 0;
     for (size_t length_seq= 10; length_seq < 15; ++length_seq) {
         for(size_t repetitions = 0; repetitions < 3; ++repetitions) {
             std::string refA = generate_random_dna(1<<length_seq);
@@ -72,11 +79,17 @@ int main() {
             std::chrono::duration<double> duration_seq_mm = end_seq_mm - start_seq_mm;
             std::cout << "Sequential MM implementation finished. (score = " << mm_seq.first[mm_seq.second.first][mm_seq.second.second] << ")\n";
 
-            auto start_par = std::chrono::high_resolution_clock::now();
+            auto sw_start_par = std::chrono::high_resolution_clock::now();
             auto sw_par = SmithWatermanWavefrontTp(refA, refB, -1, 1, -2, 8);
-            auto end_par = std::chrono::high_resolution_clock::now();
-            std::chrono::duration<double> duration_par = end_par - start_par;
-            std::cout << "Parallel implementation finished."<< "\n";
+            auto sw_end_par = std::chrono::high_resolution_clock::now();
+            std::chrono::duration<double> sw_duration_par = sw_end_par - sw_start_par;
+            std::cout << "Parallel SW implementation finished."<< "\n";
+
+            auto mm_start_par = std::chrono::high_resolution_clock::now();
+            auto mm_par = MyersMillerWavefrontTp(refA, refB, -1, 1, -2, 8);
+            auto mm_end_par = std::chrono::high_resolution_clock::now();
+            std::chrono::duration<double> mm_duration_par = mm_end_par - mm_start_par;
+            std::cout << "Parallel MM implementation finished."<< "\n";
 
             #ifdef USE_CUDA
             // call CUDA-related functions
@@ -86,12 +99,18 @@ int main() {
             std::chrono::duration<double> duration_cuda = end_cuda - start_cuda;
             std::cout << "CUDA implementation finished."<< "\n";
             #endif
-
-            auto start_par_scoreonly = std::chrono::high_resolution_clock::now();
+            
+            auto start_par_scoreonly_sw = std::chrono::high_resolution_clock::now();
             auto sw_par_scoreonly = SmithWatermanWavefront_ScoreOnly(refA, refB, -1, 1, -2, 8);
-            auto end_par_scoreonly = std::chrono::high_resolution_clock::now();
-            std::chrono::duration<double> duration_par_scoreonly = end_par_scoreonly - start_par_scoreonly;
-            std::cout << "Parallel (score only) implementation finished. << \n";
+            auto end_par_scoreonly_sw = std::chrono::high_resolution_clock::now();
+            std::chrono::duration<double> duration_par_scoreonly_sw = end_par_scoreonly_sw - start_par_scoreonly_sw;
+            std::cout << "Parallel SW (score only) implementation finished. << \n";
+
+            auto start_par_scoreonly_mm = std::chrono::high_resolution_clock::now();
+            auto mm_par_scoreonly = MyersMillerWavefront_ScoreOnly(refA, refB, -1, 1, -2, 8);
+            auto end_par_scoreonly_mm = std::chrono::high_resolution_clock::now();
+            std::chrono::duration<double> duration_par_scoreonly_mm = end_par_scoreonly_mm - start_par_scoreonly_mm;
+            std::cout << "Parallel SW (score only) implementation finished. << \n";
             
 
             int succ_seq = Check_Matrix_Matrix(sw_seq, mm_seq);
@@ -102,18 +121,27 @@ int main() {
             if (succ_par == -1) {
                 std::cerr << "Test failed for parallel implementation" << length_seq << "\n";
             }
-            succ_scoreonly = Check_Matrix_Score(sw_seq, sw_par_scoreonly);
-            if (succ_scoreonly == -1) {
-                std::cerr << "Test failed for sequences of length " << length_seq << "\n";
+            succ_scoreonly_sw = Check_Matrix_Score(sw_seq, sw_par_scoreonly);
+            if (succ_scoreonly_sw == -1) {
+                std::cerr << "Test failed for SW sequences of length " << length_seq << "\n";
+                break;
+            }
+            succ_scoreonly_mm = Check_Matrix_Score(mm_seq, mm_par_scoreonly);
+            if (succ_scoreonly_mm == -1) {
+                std::cerr << "Test failed for MM sequences of length " << length_seq << "\n";
                 break;
             }
 
-            double t_par = duration_par.count();
+            double t_par_sw = sw_duration_par.count();
+            double t_par_mm = mm_duration_par.count();
             double t_seq_sw = duration_seq_sw.count();
             double t_seq_mm = duration_seq_mm.count();
-            double t_par_scoreonly = duration_par_scoreonly.count();
-            double speedup_par = t_seq_sw / t_par;
-            double speedup_par_scoreonly = t_seq_sw / t_par_scoreonly;
+            double t_par_scoreonly_sw = duration_par_scoreonly_sw.count();
+            double t_par_scoreonly_mm = duration_par_scoreonly_mm.count();
+            double speedup_par_sw = t_seq_sw / t_par_sw;
+            double speedup_par_mm = t_seq_mm / t_par_mm;
+            double speedup_par_scoreonly_sw = t_seq_sw / t_par_scoreonly_sw;
+            double speedup_par_scoreonly_mm = t_seq_mm / t_par_scoreonly_mm;
 
             #ifdef USE_CUDA
             succ_cuda = Check_Matrix_Score(sw_seq, cuda_result);
@@ -125,14 +153,23 @@ int main() {
             #endif
 
             std::cout << "Length: " << (1<<length_seq) << "\n";
-            std::cout << "Sequential time: " << t_seq_sw << " sec\n";
-            std::cout << "Parallel time: " << t_par << " sec\n";
+            std::cout << "Sequential MM time: " << t_seq_sw << " sec\n";
+            std::cout << "Parallel SW time: " << t_par_sw << " sec\n";
+
+            std::cout << "Sequential MM time: " << t_seq_mm << " sec\n";
+            std::cout << "Parallel MM time: " << t_par_mm << " sec\n";
+
             #ifdef USE_CUDA
             std::cout << "Cuda time: " << t_cuda << " sec\n";
             #endif
-            std::cout << "Parallel time (score only): " << t_par_scoreonly << " sec\n";
-            std::cout << "Speedup parallel - sequential:  " << speedup_par << "x\n";
-            std::cout << "Speedup parallel (score only) - sequential:  " << speedup_par_scoreonly << "x\n";
+            std::cout << "Parallel SW time (score only): " << t_par_scoreonly_sw << " sec\n";
+            std::cout << "Speedup parallel SW - sequential:  " << speedup_par_sw << "x\n";
+            std::cout << "Speedup parallel SW (score only) - sequential:  " << speedup_par_scoreonly_sw << "x\n";
+
+            std::cout << "Parallel MM time (score only): " << t_par_scoreonly_mm << " sec\n";
+            std::cout << "Speedup parallel MM - sequential:  " << speedup_par_mm << "x\n";
+            std::cout << "Speedup parallel MM (score only) - sequential:  " << speedup_par_scoreonly_mm << "x\n";
+
             #ifdef USE_CUDA
             std::cout << "Speedup cuda - sequential:  " << speedup_cuda << "x\n";
             #endif
@@ -140,17 +177,31 @@ int main() {
         }
     }
 
-    /////////// Time performance tests ///////////////
-    auto timing = function_test_threads(SmithWatermanWavefrontTp, {1,2,4,8,16});
-    for(auto i: timing){
+    /////////// Time performance tests SW ///////////////
+    auto timing1 = function_test_threads(SmithWatermanWavefrontTp, {1,2,4,8,16});
+    for(auto i: timing1){
         std::cout << i << " ";
     }
     std::cout << "\n";
 
-    auto timingscoreonly = function_test_size(SmithWatermanWavefront_ScoreOnly, {1<<10,1<<11,1<<12,1<<13,1<<14},{1<<10,1<<11,1<<12,1<<13,1<<14}, 8);
-    auto timingseq = function_test_size(smith_waterman_dp, {1<<10,1<<11,1<<12,1<<13,1<<14},{1<<10,1<<11,1<<12,1<<13,1<<14});
-    for(int i=0; i<timingseq.size(); ++i){
-        std::cout << timingseq[i]/timingscoreonly[i] << " ";
+    auto timingscoreonly1 = function_test_size(SmithWatermanWavefront_ScoreOnly, {1<<10,1<<11,1<<12,1<<13,1<<14},{1<<10,1<<11,1<<12,1<<13,1<<14}, 8);
+    auto timingseq1 = function_test_size(smith_waterman_dp, {1<<10,1<<11,1<<12,1<<13,1<<14},{1<<10,1<<11,1<<12,1<<13,1<<14});
+    for(int i=0; i<timingseq1.size(); ++i){
+        std::cout << timingseq1[i]/timingscoreonly1[i] << " ";
+    }
+    std::cout << "\n";
+
+    /////////// Time performance tests MM ///////////////
+    auto timing2 = function_test_threads(MyersMillerWavefrontTp, {1,2,4,8,16});
+    for(auto i: timing2){
+        std::cout << i << " ";
+    }
+    std::cout << "\n";
+
+    auto timingscoreonly2 = function_test_size(MyersMillerWavefront_ScoreOnly, {1<<10,1<<11,1<<12,1<<13,1<<14},{1<<10,1<<11,1<<12,1<<13,1<<14}, 8);
+    auto timingseq2 = function_test_size(myers_miller, {1<<10,1<<11,1<<12,1<<13,1<<14},{1<<10,1<<11,1<<12,1<<13,1<<14});
+    for(int i=0; i<timingseq2.size(); ++i){
+        std::cout << timingseq2[i]/timingscoreonly2[i] << " ";
     }
     std::cout << "\n";
 
