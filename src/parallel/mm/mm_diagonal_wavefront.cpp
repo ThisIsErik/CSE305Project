@@ -8,7 +8,7 @@
 #include "thread_pool/thread_pool.h"
 #include "mm_diagonal_wavefront_tp.h"
 
-static void FillAntiDiagonalMM(
+void FillAntiDiagonalMM(
     const std::string& A,
     const std::string& B,
     int mi, int ma, int g,
@@ -36,7 +36,7 @@ static void FillAntiDiagonalMM(
     }
 }
 
-static std::vector<int> NWScore(
+std::vector<int> NWScore(
     const std::string& A,
     const std::string& B,
     int mi, int ma, int g,
