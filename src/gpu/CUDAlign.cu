@@ -6,12 +6,12 @@
 #include <cuda_runtime.h>
 #include "utils/types.h"
 
-__device__ __host__ inline int get_index(int i, int j, int n) {
-    return i * (n + 1) + j;
+__device__ __host__ inline size_t get_index(size_t i, size_t j, size_t n) {
+    return i * (n + 1ULL) + j;
 }
 
 __global__
-void CUDAlignAux(int* dp, 
+void CUDAlignAux(unsigned short* dp, 
     const char* A,
     const char* B,
     int external_diagonal, 
@@ -22,56 +22,62 @@ void CUDAlignAux(int* dp,
     int alpha,
     int* max_val,
     long long* max_pos) {
+
     if (blockIdx.x <= external_diagonal && external_diagonal - blockIdx.x < BIG_ROWS){
-        // in big grid, this block will treat the big cell indexed G_(external_diagonal-blockIdx, blockIdx)
-        int topLeft_i = (external_diagonal-blockIdx.x)*rows;
+        int topLeft_i = (external_diagonal - blockIdx.x) * rows;
         int topLeft_j = blockIdx.x * columns;
-        for (int internal_diagonal = 0; internal_diagonal < rows/alpha + columns - 1; internal_diagonal++){
-            // inside the big gird cell, we have rows x columns individual cells
-            // our thread will take care of lines threadIdx*alpha to (threadIdx+1)*alpha - 1
 
-            // on this internal diagonal, the current thread will take care of alpha rows on this column
+        for (int internal_diagonal = 0; internal_diagonal < rows / alpha + columns - 1; internal_diagonal++) {
             int row_thread = threadIdx.x * alpha;
-            int column_thread = internal_diagonal - threadIdx.x; 
-            if (column_thread >= 0 && column_thread < columns){
-                // check column index is valid
+            int column_thread = internal_diagonal - threadIdx.x;
 
-                for (int offset = 0; offset < alpha; offset++){
-                    // offset will say which one out of the alpha rows we process
-                    int i = topLeft_i + row_thread + offset; // i = topLeft_i index of big gridcell + which rows these thread processes + offset
-                    int j = topLeft_j + column_thread; // j = topLeft_j index of big gridcell + which column this thread processes for this antidiagonal
+            if (column_thread >= 0 && column_thread < columns) {
+                for (int offset = 0; offset < alpha; offset++) {
+                    int i = topLeft_i + row_thread + offset;
+                    int j = topLeft_j + column_thread;
+
+                    if (i < 0 || j < 0 || i >= m || j >= n || i + 1 > m || j + 1 > n) {
+                        printf("[OOB] Thread (%d,%d): i=%d j=%d (m=%d, n=%d)\n", blockIdx.x, threadIdx.x, i, j, m, n);
+                        continue;
+                    }
 
                     int p = (A[i] == B[j]) ? ma : mi;
-                    int val = max(max(max(
-                    dp[get_index(i, j, n)] + p,
-                    dp[get_index(i + 1, j, n)] + g),
-                    dp[get_index(i, j + 1, n)] + g),
-                    0);
-                    dp[get_index(i + 1, j + 1, n)] = val;
 
-                    int old_max = atomicMax(max_val, val);
+                    size_t write_index = ((size_t)(i + 1)) * (n + 1ULL) + (j + 1);
+                    if (write_index >= (size_t)(m + 1) * (n + 1)) {
+                        printf("[ERROR] Invalid dp index at (%d,%d): index=%zu\n", i + 1, j + 1, write_index);
+                        continue;
+                    }
+
+                    if (i == 0 && j == 0 && threadIdx.x == 0 && blockIdx.x == 0) {
+                        printf("[TRACE] Kernel start: A[0]=%c B[0]=%c n=%d\n", A[0], B[0], n);
+                    }
+
+                    unsigned short val = max(max(max(
+                        (int)dp[get_index(i, j, n)] + p,
+                        (int)dp[get_index(i + 1, j, n)] + g),
+                        (int)dp[get_index(i, j + 1, n)] + g),
+                        0);
+
+                    dp[write_index] = val;
+
+                    int old_max = atomicMax(max_val, static_cast<int>(val));
                     long long pos_code = (static_cast<long long>(i + 1) << 32) | (j + 1);
 
                     if (val > old_max) {
                         *max_pos = pos_code;
-                    }
-                    else if (val == old_max) {
+                    } else if (val == old_max) {
                         atomicMax(reinterpret_cast<unsigned long long*>(max_pos),
-                                static_cast<unsigned long long>(pos_code));
+                                  static_cast<unsigned long long>(pos_code));
                     }
-                    
                 }
             }
-            __syncthreads(); // sync all threads within the block before moving on to the next internal diagonal
+            __syncthreads();
         }
     }
 }
 
-SWResultScore CUDAlign(
-    const std::string& A,
-    const std::string& B,
-    int mi, int ma, int g
-) {
+SWResultScore CUDAlign(const std::string& A, const std::string& B, int mi, int ma, int g) {
     const size_t BLOCKS_NUM = 32;
     const size_t THREADS_PER_BLOCK = 32;
     const size_t ROWS_PER_THREAD = 4;
@@ -89,16 +95,19 @@ SWResultScore CUDAlign(
     cudaMemcpy(dev_max_val, &host_max_val, sizeof(int), cudaMemcpyHostToDevice);
     cudaMemcpy(dev_max_pos, &host_max_pos, sizeof(long long), cudaMemcpyHostToDevice);
 
-    const size_t BIG_COLUMNS = BLOCKS_NUM; // B
-    const size_t BIG_ROWS = m/(THREADS_PER_BLOCK * ROWS_PER_THREAD); // m/(alpha*T)
-    const size_t columns = n/BLOCKS_NUM; // C = n/B
-    const size_t rows = THREADS_PER_BLOCK * ROWS_PER_THREAD; // R = alpha*T
-    const size_t alpha = ROWS_PER_THREAD; // alpha
+    const size_t rows = THREADS_PER_BLOCK * ROWS_PER_THREAD;
+    const size_t columns = (n + BLOCKS_NUM - 1) / BLOCKS_NUM;
+    const size_t BIG_COLUMNS = BLOCKS_NUM;
+    const size_t BIG_ROWS = (m + rows - 1) / rows;
+    const size_t alpha = ROWS_PER_THREAD;
 
-    // moving the data to device 
-    int* dpd;
-    cudaMalloc(&dpd, (m + 1) * (n + 1) * sizeof(int));
-    cudaMemset(dpd, 0, (m + 1) * (n + 1) * sizeof(int));
+    unsigned short* dpd;
+    cudaError_t err = cudaMalloc(&dpd, (m + 1) * (n + 1) * sizeof(unsigned short));
+    if (err != cudaSuccess) {
+        std::cerr << "CUDA malloc failed: " << cudaGetErrorString(err) << std::endl;
+        return {0, 0, 0};
+    }
+    cudaMemset(dpd, 0, (m + 1) * (n + 1) * sizeof(unsigned short));
 
     char* A_dev;
     char* B_dev;
@@ -107,28 +116,27 @@ SWResultScore CUDAlign(
     cudaMemcpy(A_dev, A.c_str(), m * sizeof(char), cudaMemcpyHostToDevice);
     cudaMemcpy(B_dev, B.c_str(), n * sizeof(char), cudaMemcpyHostToDevice);
 
-    // computing on GPU
     for (int external_diagonal = 0; external_diagonal < BIG_COLUMNS + BIG_ROWS - 1; external_diagonal++) {
         CUDAlignAux<<<BLOCKS_NUM, THREADS_PER_BLOCK>>>(
-            dpd,
-            A_dev, B_dev,
-            external_diagonal,
+            dpd, A_dev, B_dev, external_diagonal,
             mi, ma, g,
             rows, columns,
             BIG_ROWS, BIG_COLUMNS,
-            m, n,
-            alpha,
-            dev_max_val,
-            dev_max_pos
-        );
+            m, n, alpha,
+            dev_max_val, dev_max_pos);
+
+        cudaError_t kernel_err = cudaGetLastError();
+        if (kernel_err != cudaSuccess) {
+            std::cerr << "Kernel launch failed: " << cudaGetErrorString(kernel_err) << std::endl;
+            break;
+        }
+        cudaDeviceSynchronize();
     }
 
-    // copying the result back
     cudaMemcpy(&host_max_val, dev_max_val, sizeof(int), cudaMemcpyDeviceToHost);
     cudaMemcpy(&host_max_pos, dev_max_pos, sizeof(long long), cudaMemcpyDeviceToHost);
     int max_i = static_cast<int>(host_max_pos >> 32);
     int max_j = static_cast<int>(host_max_pos & 0xFFFFFFFF);
-    // std::cout << "Max value: " << host_max_val << " at (" << max_i << ", " << max_j << ")\n";
 
     cudaFree(dpd);
     cudaFree(A_dev);
