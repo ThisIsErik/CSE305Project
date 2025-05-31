@@ -46,9 +46,8 @@ int main() {
     std::cout << "Aligned A: " << sw_aligned.first << "\n";
     std::cout << "Aligned B: " << sw_aligned.second << "\n";
 
-    std::pair<std::vector<std::vector<int>>, std::pair<int,int>> mm_dp = myers_miller_dp(A, B, -1, 1, -2);
-    std::pair<std::string, std::string> mm_aligned = myers_miller_traceback(A, B, 1, -1, -2);
-    std::cout << "Myers Miller Score: " << mm_dp.first[mm_dp.second.first][mm_dp.second.second] << "\n";
+    std::pair<std::string, std::string> mm_aligned = myers_miller_align(A, B, 1, -1, -2, -1);
+    std::cout << "Myers-Miller Alignment:\n";
     std::cout << "Aligned A: " << mm_aligned.first << "\n";
     std::cout << "Aligned B: " << mm_aligned.second << "\n";
 
@@ -67,7 +66,6 @@ int main() {
     int succ_par = 0;
     int succ_cuda = 0;
     int succ_scoreonly_sw = 0;
-    int succ_scoreonly_mm = 0;
     
     for (size_t length_seq= 10; length_seq < 15; ++length_seq) {
         for(size_t repetitions = 0; repetitions < 0; ++repetitions) {
@@ -82,10 +80,10 @@ int main() {
             std::cout << "Sequential SW implementation finished. (score = " << sw_seq.first[sw_seq.second.first][sw_seq.second.second] << ")\n";
 
             auto start_seq_mm = std::chrono::high_resolution_clock::now();
-            auto mm_seq = myers_miller_dp(refA, refB, -1, 1, -2);
+            auto mm_aligned = myers_miller_align(refA, refB, 1, -1, -2, -1);
             auto end_seq_mm = std::chrono::high_resolution_clock::now();
             std::chrono::duration<double> duration_seq_mm = end_seq_mm - start_seq_mm;
-            std::cout << "Sequential MM implementation finished. (score = " << mm_seq.first[mm_seq.second.first][mm_seq.second.second] << ")\n";
+            std::cout << "Sequential MM implementation finished.\n";
 
             auto sw_start_par = std::chrono::high_resolution_clock::now();
             auto sw_par = SmithWatermanWavefrontTp(refA, refB, -1, 1, -2, 8);
@@ -121,10 +119,6 @@ int main() {
             std::cout << "Parallel MM (score only) implementation finished. << \n";
             
 
-            int succ_seq = Check_Matrix_Matrix(sw_seq, mm_seq);
-            if (succ_seq == -1) {
-                std::cerr << "Test failed for MM implementation" << length_seq << "\n";
-            }
             succ_par = Check_Matrix_Matrix(sw_seq, sw_par);
             if (succ_par == -1) {
                 std::cerr << "Test failed for SW parallel implementation" << length_seq << "\n";
@@ -133,12 +127,6 @@ int main() {
             if (succ_scoreonly_sw == -1) {
                 std::cerr << "Test failed for SW sequences of length " << length_seq << "\n";
                 break;
-            }
-            succ_scoreonly_mm = Check_Matrix_Score(mm_seq, mm_par_scoreonly);
-            if (succ_scoreonly_mm == -1) {
-                std::cerr << "Test failed for MM sequences of length " << length_seq << "\n";
-                break;
-            }
 
             double t_par_sw = sw_duration_par.count();
             double t_par_mm = mm_duration_par.count();

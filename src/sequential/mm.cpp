@@ -1,236 +1,259 @@
 #include "mm.h"
-#include <vector>
-#include <string>
-#include <utility>
 #include <algorithm>
-#include <climits>
+#include <limits>
+#include <tuple>
 
-std::pair<std::string, std::string> myers_miller(
-    const std::string& A, 
-    const std::string& B, 
-    int match, 
-    int mismatch, 
-    int gap
-) {
-    return myers_miller_recursive(A, B, 0, A.length(), 0, B.length(), match, mismatch, gap);
-}
+namespace {
 
-std::pair<std::string, std::string> myers_miller_recursive(
-    const std::string& A, 
-    const std::string& B, 
-    int start_a, 
-    int end_a, 
-    int start_b, 
-    int end_b, 
-    int match, 
-    int mismatch, 
-    int gap
-) {
-    int len_a = end_a - start_a;
-    int len_b = end_b - start_b;
+struct AlignmentData {
+    std::vector<int> score;
+    std::vector<int> gap_open;
+    std::vector<int> gap_extend;
+};
 
-    if (len_a == 0) {
-        return {std::string(len_b, '-'), B.substr(start_b, len_b)};
-    } else if (len_b == 0) {
-        return {A.substr(start_a, len_a), std::string(len_a, '-')};
-    } else if (len_a == 1 || len_b == 1) {
-        // Full DP when one sequence is very short
-        std::vector<std::vector<int>> dp(len_a + 1, std::vector<int>(len_b + 1, 0));
-        for (int i = 0; i <= len_a; ++i) dp[i][0] = i * gap;
-        for (int j = 0; j <= len_b; ++j) dp[0][j] = j * gap;
-
-        for (int i = 1; i <= len_a; ++i) {
-            for (int j = 1; j <= len_b; ++j) {
-                int score = (A[start_a + i - 1] == B[start_b + j - 1]) ? match : mismatch;
-                dp[i][j] = std::max({
-                    dp[i-1][j-1] + score,
-                    dp[i-1][j] + gap,
-                    dp[i][j-1] + gap
-                });
-            }
-        }
-
-        std::string alignedA, alignedB;
-        int i = len_a, j = len_b;
-
-        while (i > 0 || j > 0) {
-            if (i > 0 && j > 0) {
-                int score = (A[start_a + i - 1] == B[start_b + j - 1]) ? match : mismatch;
-                if (dp[i][j] == dp[i-1][j-1] + score) {
-                    alignedA = A[start_a + i - 1] + alignedA;
-                    alignedB = B[start_b + j - 1] + alignedB;
-                    --i; --j;
-                    continue;
-                }
-            }
-
-            if (i > 0 && dp[i][j] == dp[i-1][j] + gap) {
-                alignedA = A[start_a + i - 1] + alignedA;
-                alignedB = '-' + alignedB;
-                --i;
-            } else {
-                alignedA = '-' + alignedA;
-                alignedB = B[start_b + j - 1] + alignedB;
-                --j;
-            }
-        }
-
-        return {alignedA, alignedB};
-    }
-
-    int mid_a = start_a + len_a / 2;
-    int mid_b = find_midpoint(A, B, start_a, mid_a, end_a, start_b, end_b, match, mismatch, gap);
-
-    auto left = myers_miller_recursive(A, B, start_a, mid_a, start_b, mid_b, match, mismatch, gap);
-    auto right = myers_miller_recursive(A, B, mid_a, end_a, mid_b, end_b, match, mismatch, gap);
-
-    return {left.first + right.first, left.second + right.second};
-}
-
-int find_midpoint(
-    const std::string& A, 
-    const std::string& B, 
-    int start_a, 
-    int mid_a, 
-    int end_a, 
-    int start_b, 
-    int end_b, 
-    int match, 
-    int mismatch, 
-    int gap
-) {
-    std::vector<int> fwd = forward_score(A, B, start_a, mid_a, start_b, end_b, match, mismatch, gap);
-    std::vector<int> rev = reverse_score(A, B, mid_a, end_a, start_b, end_b, match, mismatch, gap);
-
-    int best = INT_MIN;
-    int mid_b = start_b;
-
-    for (int j = 0; j <= end_b - start_b; ++j) {
-        int score = fwd[j] + rev[end_b - start_b - j];
-        if (score > best) {
-            best = score;
-            mid_b = start_b + j;
-        }
-    }
-
-    return mid_b;
-}
-
-std::vector<int> forward_score(
-    const std::string& A, 
-    const std::string& B, 
-    int start_a, 
-    int end_a, 
-    int start_b, 
-    int end_b, 
-    int match, 
-    int mismatch, 
-    int gap
-) {
-    int len_a = end_a - start_a;
-    int len_b = end_b - start_b;
-
-    std::vector<int> current(len_b + 1), previous(len_b + 1);
-    for (int j = 0; j <= len_b; ++j) previous[j] = j * gap;
-
-    for (int i = 1; i <= len_a; ++i) {
-        current[0] = i * gap;
-        for (int j = 1; j <= len_b; ++j) {
-            int score = (A[start_a + i - 1] == B[start_b + j - 1]) ? match : mismatch;
-            current[j] = std::max({
-                previous[j - 1] + score,
-                previous[j] + gap,
-                current[j - 1] + gap
-            });
-        }
-        std::swap(current, previous);
-    }
-
-    return previous;
-}
-
-std::vector<int> reverse_score(
-    const std::string& A, 
-    const std::string& B, 
-    int start_a, 
-    int end_a, 
-    int start_b, 
-    int end_b, 
-    int match, 
-    int mismatch, 
-    int gap
-) {
-    int len_a = end_a - start_a;
-    int len_b = end_b - start_b;
-
-    std::vector<int> current(len_b + 1), previous(len_b + 1);
-    for (int j = 0; j <= len_b; ++j) previous[j] = j * gap;
-
-    for (int i = 1; i <= len_a; ++i) {
-        current[0] = i * gap;
-        for (int j = 1; j <= len_b; ++j) {
-            int score = (A[end_a - i] == B[end_b - j]) ? match : mismatch;
-            current[j] = std::max({
-                previous[j - 1] + score,
-                previous[j] + gap,
-                current[j - 1] + gap
-            });
-        }
-        std::swap(current, previous);
-    }
-
-    return previous;
-}
-
-// Return DP matrix (for diagnostic purposes) and midpoint (as in SW-style)
-std::pair<std::vector<std::vector<int>>, std::pair<int, int>> myers_miller_dp(
+AlignmentData forward_pass(
     const std::string& A,
     const std::string& B,
-    int mismatch,
-    int match,
-    int gap
-) {
-    int len_a = A.length();
-    int len_b = B.length();
-
-    std::vector<std::vector<int>> dp(len_a + 1, std::vector<int>(len_b + 1));
-
-    for (int i = 0; i <= len_a; ++i) dp[i][0] = i * gap;
-    for (int j = 0; j <= len_b; ++j) dp[0][j] = j * gap;
-
-    for (int i = 1; i <= len_a; ++i) {
-        for (int j = 1; j <= len_b; ++j) {
-            int score = (A[i - 1] == B[j - 1]) ? match : mismatch;
-            dp[i][j] = std::max({
-                dp[i-1][j-1] + score,
-                dp[i-1][j] + gap,
-                dp[i][j-1] + gap
+    int match_score,
+    int mismatch_score,
+    int gap_open,
+    int gap_extend,
+    int start_i,
+    int end_i,
+    int start_j,
+    int end_j) {
+    
+    int m = end_i - start_i;
+    int n = end_j - start_j;
+    
+    AlignmentData data;
+    data.score.resize(n + 1);
+    data.gap_open.resize(n + 1);
+    data.gap_extend.resize(n + 1);
+    
+    // Initialize first row
+    data.score[0] = 0;
+    data.gap_open[0] = std::numeric_limits<int>::min();
+    data.gap_extend[0] = std::numeric_limits<int>::min();
+    
+    for (int j = 1; j <= n; ++j) {
+        data.score[j] = gap_open + (j - 1) * gap_extend;
+        data.gap_open[j] = std::numeric_limits<int>::min();
+        data.gap_extend[j] = data.score[j - 1] + gap_open;
+    }
+    
+    for (int i = 1; i <= m; ++i) {
+        int diag_score = data.score[0];
+        int diag_gap_open = data.gap_open[0];
+        int diag_gap_extend = data.gap_extend[0];
+        
+        data.score[0] = gap_open + (i - 1) * gap_extend;
+        data.gap_open[0] = std::numeric_limits<int>::min();
+        data.gap_extend[0] = data.score[0];
+        
+        for (int j = 1; j <= n; ++j) {
+            int match_mismatch = (A[start_i + i - 1] == B[start_j + j - 1]) ? 
+                                match_score : mismatch_score;
+            
+            int new_score = std::max({
+                diag_score + match_mismatch,
+                diag_gap_open,
+                diag_gap_extend
             });
+            
+            int new_gap_open = std::max(
+                data.score[j] + gap_open,
+                data.gap_extend[j] + gap_extend
+            );
+            
+            int new_gap_extend = std::max(
+                data.score[j - 1] + gap_open,
+                data.gap_extend[j - 1] + gap_extend
+            );
+            
+            diag_score = data.score[j];
+            diag_gap_open = data.gap_open[j];
+            diag_gap_extend = data.gap_extend[j];
+            
+            data.score[j] = new_score;
+            data.gap_open[j] = new_gap_open;
+            data.gap_extend[j] = new_gap_extend;
         }
     }
-
-    // Find max score and position
-    int max_score = INT_MIN;
-    std::pair<int, int> max_pos = {0, 0};
-    for (int i = 0; i <= len_a; ++i) {
-        for (int j = 0; j <= len_b; ++j) {
-            if (dp[i][j] > max_score) {
-                max_score = dp[i][j];
-                max_pos = {i, j};
-            }
-        }
-    }
-
-    return {dp, max_pos};
+    
+    return data;
 }
 
-// Traceback using divide-and-conquer (returns aligned strings)
-std::pair<std::string, std::string> myers_miller_traceback(
+AlignmentData reverse_pass(
     const std::string& A,
     const std::string& B,
-    int mismatch,
-    int match,
-    int gap
-) {
-    return myers_miller_recursive(A, B, 0, A.size(), 0, B.size(), match, mismatch, gap);
+    int match_score,
+    int mismatch_score,
+    int gap_open,
+    int gap_extend,
+    int start_i,
+    int end_i,
+    int start_j,
+    int end_j) {
+    
+    int m = end_i - start_i;
+    int n = end_j - start_j;
+    
+    AlignmentData data;
+    data.score.resize(n + 1);
+    data.gap_open.resize(n + 1);
+    data.gap_extend.resize(n + 1);
+    
+    // Initialize last row
+    data.score[n] = 0;
+    data.gap_open[n] = std::numeric_limits<int>::min();
+    data.gap_extend[n] = std::numeric_limits<int>::min();
+    
+    for (int j = n - 1; j >= 0; --j) {
+        data.score[j] = gap_open + (n - j - 1) * gap_extend;
+        data.gap_open[j] = std::numeric_limits<int>::min();
+        data.gap_extend[j] = data.score[j + 1] + gap_open;
+    }
+    
+    for (int i = m - 1; i >= 0; --i) {
+        int diag_score = data.score[n];
+        int diag_gap_open = data.gap_open[n];
+        int diag_gap_extend = data.gap_extend[n];
+        
+        data.score[n] = gap_open + (m - i - 1) * gap_extend;
+        data.gap_open[n] = std::numeric_limits<int>::min();
+        data.gap_extend[n] = data.score[n];
+        
+        for (int j = n - 1; j >= 0; --j) {
+            int match_mismatch = (A[start_i + i] == B[start_j + j]) ? 
+                                match_score : mismatch_score;
+            
+            int new_score = std::max({
+                diag_score + match_mismatch,
+                diag_gap_open,
+                diag_gap_extend
+            });
+            
+            int new_gap_open = std::max(
+                data.score[j] + gap_open,
+                data.gap_extend[j] + gap_extend
+            );
+            
+            int new_gap_extend = std::max(
+                data.score[j + 1] + gap_open,
+                data.gap_extend[j + 1] + gap_extend
+            );
+            
+            diag_score = data.score[j];
+            diag_gap_open = data.gap_open[j];
+            diag_gap_extend = data.gap_extend[j];
+            
+            data.score[j] = new_score;
+            data.gap_open[j] = new_gap_open;
+            data.gap_extend[j] = new_gap_extend;
+        }
+    }
+    
+    return data;
+}
+
+std::pair<std::string, std::string> align_recursive(
+    const std::string& A,
+    const std::string& B,
+    int match_score,
+    int mismatch_score,
+    int gap_open,
+    int gap_extend,
+    int start_i,
+    int end_i,
+    int start_j,
+    int end_j) {
+    
+    if (end_i - start_i == 0) {
+        std::string a_gaps(end_j - start_j, '-');
+        std::string b_part = B.substr(start_j, end_j - start_j);
+        return {a_gaps, b_part};
+    }
+    
+    if (end_j - start_j == 0) {
+        std::string a_part = A.substr(start_i, end_i - start_i);
+        std::string b_gaps(end_i - start_i, '-');
+        return {a_part, b_gaps};
+    }
+    
+    if (end_i - start_i == 1 || end_j - start_j == 1) {
+        // Base case: use Needleman-Wunsch for small sequences
+        auto dp = needleman_wunsh_dp(
+            A.substr(start_i, end_i - start_i),
+            B.substr(start_j, end_j - start_j),
+            mismatch_score,
+            match_score,
+            gap_open + gap_extend
+        );
+        return needleman_wunsh_traceback(
+            dp,
+            A.substr(start_i, end_i - start_i),
+            B.substr(start_j, end_j - start_j),
+            match_score,
+            mismatch_score,
+            gap_open + gap_extend
+        );
+    }
+    
+    int mid_i = start_i + (end_i - start_i) / 2;
+    
+    // Forward pass to middle row
+    auto forward = forward_pass(
+        A, B, match_score, mismatch_score, gap_open, gap_extend,
+        start_i, mid_i, start_j, end_j
+    );
+    
+    // Reverse pass from middle row
+    auto reverse = reverse_pass(
+        A, B, match_score, mismatch_score, gap_open, gap_extend,
+        mid_i, end_i, start_j, end_j
+    );
+    
+    // Find the best midpoint
+    int best_j = start_j;
+    int best_score = std::numeric_limits<int>::min();
+    for (int j = start_j; j <= end_j; ++j) {
+        int current_score = forward.score[j - start_j] + reverse.score[j - start_j];
+        if (current_score > best_score) {
+            best_score = current_score;
+            best_j = j;
+        }
+    }
+    
+    // Recursively align the two halves
+    auto left = align_recursive(
+        A, B, match_score, mismatch_score, gap_open, gap_extend,
+        start_i, mid_i, start_j, best_j
+    );
+    
+    auto right = align_recursive(
+        A, B, match_score, mismatch_score, gap_open, gap_extend,
+        mid_i, end_i, best_j, end_j
+    );
+    
+    return {
+        left.first + right.first,
+        left.second + right.second
+    };
+}
+
+} // namespace
+
+std::pair<std::string, std::string> myers_miller_align(
+    const std::string& A,
+    const std::string& B,
+    int match_score,
+    int mismatch_score,
+    int gap_open,
+    int gap_extend) {
+    
+    return align_recursive(
+        A, B, match_score, mismatch_score, gap_open, gap_extend,
+        0, A.size(), 0, B.size()
+    );
 }
