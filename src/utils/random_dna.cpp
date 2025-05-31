@@ -27,16 +27,15 @@ std::string generate_similar_dna(size_t length, double similarity, const std::st
    static std::uniform_int_distribution<> base_dist(0, 3);
   
    std::string sequence; //the new sequecne we are making
-   // sequence.resize(length);
+   sequence.resize(length);
   
-   if (reference.empty() || similarity == 0.0) { //not trying to compare to any other seq
-       std::uniform_int_distribution<> base_dist(0, 3);
-       for (size_t i = 0; i < length; ++i) {
-           sequence[i] = nucleotides[base_dist(gen)];
-       }
-       return sequence;
-   }
-  
+    if (reference.empty() || similarity == 0.0) {
+        for (size_t i = 0; i < length; ++i) {
+            sequence.push_back(nucleotides[base_dist(gen)]);
+        }
+        return sequence;
+    }   
+
    //If the ref is longer, then want some random indices where the similarity is satisfied
    std::vector<size_t> indices;
    if (reference.length() > length) {
