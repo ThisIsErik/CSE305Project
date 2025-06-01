@@ -2,7 +2,7 @@ CXX = g++
 NVCC = /usr/local/cuda/bin/nvcc
 
 # Compiler flags
-CXXFLAGS = -std=c++20 -Wall -Wextra -Iexternal/thread-pool/include -Isrc $(DEFINES)
+CXXFLAGS = -std=c++20 -Wall -Wextra -Iexternal/thread-pool/include -Isrc 
 CUDA_HOME ?= /usr/local/cuda
 ARCH = -arch=sm_60
 NVCCFLAGS = -std=c++20 -O2 -Iexternal/thread-pool/include -I$(CUDA_HOME)/include -Isrc $(ARCH)

@@ -127,7 +127,7 @@ int main() {
             if (succ_scoreonly_sw == -1) {
                 std::cerr << "Test failed for SW sequences of length " << length_seq << "\n";
                 break;
-
+            }
             double t_par_sw = sw_duration_par.count();
             double t_par_mm = mm_duration_par.count();
             double t_seq_sw = duration_seq_sw.count();
@@ -242,11 +242,10 @@ int main() {
         std::chrono::duration<double> duration_cuda = end_cuda - start_cuda;
         gpu_timings.push_back(duration_cuda.count());
         int res_gpu = std::get<0>(cuda_result);
-        #endif
-
         if(res_gpu!=res_seq){
             std::cout << "Incorrect results: " << res_seq << " / " << res_gpu << "\n";
         }
+        #endif
     }
     std::cout << "Seq (SW): ";
     for(auto i: seq_timings){
@@ -254,11 +253,13 @@ int main() {
     }
     std::cout << "\n\n";
 
+    #ifdef USE_CUDA
     std::cout << "GPU: ";
     for(int i=0; i<gpu_timings.size(); ++i){
         std::cout << " " << gpu_timings[i] << " (" << seq_timings[i]/gpu_timings[i] << ") |";
     }
     std::cout << "\n\n";
+    #endif
 
     auto timing = function_test_size(SmithWatermanWavefront, sizes, sizes, 8);
     std::cout << "Standard parallel: ";
