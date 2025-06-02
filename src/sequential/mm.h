@@ -5,7 +5,11 @@
 #include <utility>
 
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 std::pair<std::string, std::string> myers_miller(
+=======
+std::tuple<std::string, std::string, int> myers_miller_align(
+>>>>>>> Stashed changes
 =======
 std::tuple<std::string, std::string, int> myers_miller_align(
 >>>>>>> Stashed changes

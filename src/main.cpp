@@ -10,7 +10,10 @@
 #include "parallel/sw_diagonal_wavefront.h"
 #include "parallel/sw_diagonal_score_only.h"
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 =======
+=======
+>>>>>>> Stashed changes
 
 #include "parallel/mm/mm_parallel_database.h"
 #include "parallel/mm/mm_diagonal_wavefront_tp.h"
@@ -48,6 +51,7 @@ int main() {
     std::cout << "Aligned B: " << aligned.second << "\n";
 
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
     // Myers-Miller
     std::pair<std::string, std::string> mm_aligned = myers_miller(A, B, 1, -1, -2);
     int mm_score = myers_miller_score(A, B, 1, -1, -2);
@@ -55,11 +59,16 @@ int main() {
     std::cout << "Aligned A: " << mm_aligned.first << "\n";
     std::cout << "Aligned B: " << mm_aligned.second << "\n";
 =======
+=======
+>>>>>>> Stashed changes
     // Modified MM section to match the implementation
     std::tuple<std::string, std::string, int> mm_aligned = myers_miller_align(A, B, -1, 1, -2, -1);
     std::cout << "Myers-Miller Score: " << std::get<2>(mm_aligned)<< "\n";
     std::cout << "Aligned A: " << std::get<0>(mm_aligned) << "\n";
     std::cout << "Aligned B: " << std::get<1>(mm_aligned) << "\n";
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
 
     //First parallel implementation. Create a dictionary of 1000 sequences of bases
@@ -84,6 +93,9 @@ int main() {
     int succ_scoreonly_sw = 0;
     for (size_t length_seq= 10; length_seq < 15; ++length_seq) {
         for(size_t repetitions = 0; repetitions < 3; ++repetitions) {
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
             std::string refA = generate_random_dna(1<<length_seq);
             std::string refB = generate_random_dna(1<<length_seq);
@@ -127,7 +139,10 @@ int main() {
             std::cout << "Parallel (score only) implementation finished. << \n";
             
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 =======
+=======
+>>>>>>> Stashed changes
             // For MM verification, we need to compare with NW since both are global alignment
             auto nw_seq = needleman_wunsh_dp(refA, refB, -1, 1, -2);
             auto nw_aligned = needleman_wunsh_traceback(nw_seq, refA, refB, 1, -1, -2);
@@ -139,6 +154,9 @@ int main() {
             }
 
             // Rest of the original checks remain the same
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
             succ_par = Check_Matrix_Matrix(sw_seq, sw_par);
             if (succ_par == -1) {
@@ -151,12 +169,15 @@ int main() {
             }
 
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
             double t_par = duration_par.count();
             double t_seq = duration_seq.count();
             double t_par_scoreonly = duration_par_scoreonly.count();
             double speedup_par = t_seq / t_par;
             double speedup_par_scoreonly = t_seq / t_par_scoreonly;
 =======
+=======
+>>>>>>> Stashed changes
             double t_par_sw = sw_duration_par.count();
             double t_par_mm = mm_duration_par.count();
             double t_seq_sw = duration_seq_sw.count();
@@ -180,9 +201,12 @@ int main() {
 
             std::cout << "Length: " << (1<<length_seq) << "\n";
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
             std::cout << "Sequential time: " << t_seq << " sec\n";
             std::cout << "Parallel time: " << t_par << " sec\n";
 =======
+=======
+>>>>>>> Stashed changes
             std::cout << "Sequential SW time: " << t_seq_sw << " sec\n";
             std::cout << "Parallel SW time: " << t_par_sw << " sec\n";
             std::cout << "Sequential MM time: " << t_seq_mm << " sec\n";
@@ -231,6 +255,9 @@ int main() {
         std::cout << timingseq2[i]/timingscoreonly2[i] << " ";
     }
     std::cout << "\n";
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
 
     return 0;

@@ -5,6 +5,7 @@
 #include <iostream>
 
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 static int score(char a, char b, int match, int mismatch) {
     return (a == b) ? match : mismatch;
 }
@@ -13,6 +14,8 @@ std::vector<int> nw_score(const std::string& A, const std::string& B, int match,
     if (B.empty()) {
         return {static_cast<int>(A.size()) * gap};
 =======
+=======
+>>>>>>> Stashed changes
 
 struct AlignmentData {
     std::vector<int> score;
@@ -173,6 +176,7 @@ std::pair<std::string, std::string> myers_miller(
 }
 
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 int myers_miller_score(
     const std::string& A,
     const std::string& B,
@@ -182,6 +186,8 @@ int myers_miller_score(
     return nw_score(A, B, match, mismatch, gap).back();
 }
 =======
+=======
+>>>>>>> Stashed changes
 AlignmentResult align_recursive(
     const std::string& A,
     const std::string& B,
@@ -314,5 +320,9 @@ std::tuple<std::string, std::string, int>  myers_miller_align(
     );
     
     return std::make_tuple(result.seq_a, result.seq_b, result.score);
+<<<<<<< Updated upstream
+}
+>>>>>>> Stashed changes
+=======
 }
 >>>>>>> Stashed changes
