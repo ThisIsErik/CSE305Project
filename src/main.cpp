@@ -9,6 +9,15 @@
 
 #include "parallel/sw_diagonal_wavefront.h"
 #include "parallel/sw_diagonal_score_only.h"
+<<<<<<< Updated upstream
+=======
+
+#include "parallel/mm/mm_parallel_database.h"
+#include "parallel/mm/mm_diagonal_wavefront_tp.h"
+#include "parallel/mm/mm_diagonal_wavefront.h"
+#include "parallel/mm/mm_diagonal_score_only.h"
+
+>>>>>>> Stashed changes
 #include "tests.h"
 #include <vector>
 #include <iomanip>
@@ -38,12 +47,20 @@ int main() {
     std::cout << "Aligned A: " << aligned.first << "\n";
     std::cout << "Aligned B: " << aligned.second << "\n";
 
+<<<<<<< Updated upstream
     // Myers-Miller
     std::pair<std::string, std::string> mm_aligned = myers_miller(A, B, 1, -1, -2);
     int mm_score = myers_miller_score(A, B, 1, -1, -2);
     std::cout << "Myers-Miller Score: " << mm_score << "\n";
     std::cout << "Aligned A: " << mm_aligned.first << "\n";
     std::cout << "Aligned B: " << mm_aligned.second << "\n";
+=======
+    // Modified MM section to match the implementation
+    std::tuple<std::string, std::string, int> mm_aligned = myers_miller_align(A, B, -1, 1, -2, -1);
+    std::cout << "Myers-Miller Score: " << std::get<2>(mm_aligned)<< "\n";
+    std::cout << "Aligned A: " << std::get<0>(mm_aligned) << "\n";
+    std::cout << "Aligned B: " << std::get<1>(mm_aligned) << "\n";
+>>>>>>> Stashed changes
 
     //First parallel implementation. Create a dictionary of 1000 sequences of bases
     std::string query = generate_random_dna(1000);
@@ -59,9 +76,15 @@ int main() {
     //#################  Sanity check that diagonal wavefront works  #######################
     int succ_par = 0;
     int succ_cuda = 0;
+<<<<<<< Updated upstream
     int succ_scoreonly = 0;
     for (size_t length_seq= 16; length_seq < 17; ++length_seq) {
         for(size_t repetitions = 0; repetitions < 1; ++repetitions) {
+=======
+    int succ_scoreonly_sw = 0;
+    for (size_t length_seq= 10; length_seq < 15; ++length_seq) {
+        for(size_t repetitions = 0; repetitions < 3; ++repetitions) {
+>>>>>>> Stashed changes
             std::string refA = generate_random_dna(1<<length_seq);
             std::string refB = generate_random_dna(1<<length_seq);
             std::cout << "DNA sequences generated."<< "\n";
@@ -72,7 +95,17 @@ int main() {
             std::chrono::duration<double> duration_seq = end_seq - start_seq;
             std::cout << "Sequential implementation finished. (score = " << sw_seq.first[sw_seq.second.first][sw_seq.second.second] << ")\n";
 
+<<<<<<< Updated upstream
             auto start_par = std::chrono::high_resolution_clock::now();
+=======
+            auto start_seq_mm = std::chrono::high_resolution_clock::now();
+            auto mm_seq = myers_miller_align(refA, refB, -1, 1, -2, -2);
+            auto end_seq_mm = std::chrono::high_resolution_clock::now();
+            std::chrono::duration<double> duration_seq_mm = end_seq_mm - start_seq_mm;
+            std::cout << "Sequential MM implementation finished. (score = " << std::get<2>(mm_seq) << ")\n";
+
+            auto sw_start_par = std::chrono::high_resolution_clock::now();
+>>>>>>> Stashed changes
             auto sw_par = SmithWatermanWavefrontTp(refA, refB, -1, 1, -2, 8);
             auto end_par = std::chrono::high_resolution_clock::now();
             std::chrono::duration<double> duration_par = end_par - start_par;
@@ -93,6 +126,20 @@ int main() {
             std::chrono::duration<double> duration_par_scoreonly = end_par_scoreonly - start_par_scoreonly;
             std::cout << "Parallel (score only) implementation finished. << \n";
             
+<<<<<<< Updated upstream
+=======
+            // For MM verification, we need to compare with NW since both are global alignment
+            auto nw_seq = needleman_wunsh_dp(refA, refB, -1, 1, -2);
+            auto nw_aligned = needleman_wunsh_traceback(nw_seq, refA, refB, 1, -1, -2);
+            
+            if (nw_aligned.first == std::get<0>(mm_aligned) && nw_aligned.second == std::get<1>(mm_aligned)) {
+                std::cout << "MM alignment matches NW alignment (correct)\n";
+            } else {
+                std::cerr << "MM alignment differs from NW alignment!\n";
+            }
+
+            // Rest of the original checks remain the same
+>>>>>>> Stashed changes
             succ_par = Check_Matrix_Matrix(sw_seq, sw_par);
             if (succ_par == -1) {
                 std::cerr << "Test failed for parallel implementation" << length_seq << "\n";
@@ -103,11 +150,24 @@ int main() {
                 break;
             }
 
+<<<<<<< Updated upstream
             double t_par = duration_par.count();
             double t_seq = duration_seq.count();
             double t_par_scoreonly = duration_par_scoreonly.count();
             double speedup_par = t_seq / t_par;
             double speedup_par_scoreonly = t_seq / t_par_scoreonly;
+=======
+            double t_par_sw = sw_duration_par.count();
+            double t_par_mm = mm_duration_par.count();
+            double t_seq_sw = duration_seq_sw.count();
+            double t_seq_mm = duration_seq_mm.count();
+            double t_par_scoreonly_sw = duration_par_scoreonly_sw.count();
+            double t_par_scoreonly_mm = duration_par_scoreonly_mm.count();
+            double speedup_par_sw = t_seq_sw / t_par_sw;
+            double speedup_par_mm = t_seq_mm / t_par_mm;
+            double speedup_par_scoreonly_sw = t_seq_sw / t_par_scoreonly_sw;
+            double speedup_par_scoreonly_mm = t_seq_mm / t_par_scoreonly_mm;
+>>>>>>> Stashed changes
 
             #ifdef USE_CUDA
             succ_cuda = Check_Matrix_Score(sw_seq, cuda_result);
@@ -119,8 +179,16 @@ int main() {
             #endif
 
             std::cout << "Length: " << (1<<length_seq) << "\n";
+<<<<<<< Updated upstream
             std::cout << "Sequential time: " << t_seq << " sec\n";
             std::cout << "Parallel time: " << t_par << " sec\n";
+=======
+            std::cout << "Sequential SW time: " << t_seq_sw << " sec\n";
+            std::cout << "Parallel SW time: " << t_par_sw << " sec\n";
+            std::cout << "Sequential MM time: " << t_seq_mm << " sec\n";
+            std::cout << "Parallel MM time: " << t_par_mm << " sec\n";
+
+>>>>>>> Stashed changes
             #ifdef USE_CUDA
             std::cout << "Cuda time: " << t_cuda << " sec\n";
             #endif
@@ -131,7 +199,39 @@ int main() {
             std::cout << "Speedup cuda - sequential:  " << speedup_cuda << "x\n";
             #endif
     }
+<<<<<<< Updated upstream
 }
+=======
+
+    // Rest of the original file remains exactly the same
+    /////////// Time performance tests SW ///////////////
+    auto timing1 = function_test_threads(SmithWatermanWavefrontTp, {1,2,4,8,16});
+    for(auto i: timing1){
+        std::cout << i << " ";
+    }
+    std::cout << "\n";
+
+    auto timingscoreonly1 = function_test_size(SmithWatermanWavefront_ScoreOnly, {1<<10,1<<11,1<<12,1<<13,1<<14},{1<<10,1<<11,1<<12,1<<13,1<<14}, 8);
+    auto timingseq1 = function_test_size(smith_waterman_dp, {1<<10,1<<11,1<<12,1<<13,1<<14},{1<<10,1<<11,1<<12,1<<13,1<<14});
+    for(size_t i=0; i<timingseq1.size(); ++i){
+        std::cout << timingseq1[i]/timingscoreonly1[i] << " ";
+    }
+    std::cout << "\n";
+
+    /////////// Time performance tests MM ///////////////
+    auto timing2 = function_test_threads(MyersMillerWavefrontTp, {1,2,4,8,16});
+    for(auto i: timing2){
+        std::cout << i << " ";
+    }
+    std::cout << "\n";
+
+    auto timingscoreonly2 = function_test_size(MyersMillerWavefront_ScoreOnly, {1<<10,1<<11,1<<12,1<<13,1<<14},{1<<10,1<<11,1<<12,1<<13,1<<14}, 8);
+    auto timingseq2 = function_test_size(needleman_wunsh_dp, {1<<10,1<<11,1<<12,1<<13,1<<14},{1<<10,1<<11,1<<12,1<<13,1<<14});
+    for(size_t i=0; i<timingseq2.size(); ++i){
+        std::cout << timingseq2[i]/timingscoreonly2[i] << " ";
+    }
+    std::cout << "\n";
+>>>>>>> Stashed changes
 
     return 0;
 }

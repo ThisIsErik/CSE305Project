@@ -10,6 +10,17 @@ int Check_Matrix_Matrix(const SWResult& sw_seq, const SWResult& sw_par);
 int Check_Matrix_Score(const SWResult& sw_seq, const SWResultScore& sw_score_only);
 int Check_Score_Score(const SWResultScore& result1, const SWResultScore& result2);
 
+int Check_Matrix_Matrix_MM(const std::tuple<std::string, std::string, int>& mm_seq, const std::tuple<std::string, std::string, int>& mm_par
+);
+
+int Check_Score_Score_MM(const std::tuple<std::string, std::string, int>& result1,const std::tuple<std::string, std::string, int>& result2
+);
+
+int Check_Matrix_Score_MM(
+    const std::tuple<std::string, std::string, int>& mm_full,
+    const MMResultScore& mm_score_only
+);
+
 template <typename T>
 void printMatrix(const std::vector<std::vector<T>>& matrix, 
                  std::pair<int, int> highlight = {-1, -1}) {
@@ -49,7 +60,5 @@ void printAntidiagonals(const std::vector<std::vector<int>>& matrix) {
         std::cout << "\n";
     }
 }
-
-
 
 #endif
