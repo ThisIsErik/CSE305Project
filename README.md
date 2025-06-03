@@ -12,7 +12,7 @@ cd CSE305Project
 git submodule update --init --recursive
 ```
 
-🧱 Build Options
+## 🧱 Build Options
 There are two build targets available:
 
 make – Builds the default version.
@@ -25,7 +25,7 @@ make        # Default build
 # or
 make cpu    # CPU-only build
 ```
-🚀 Running the Project
+## 🚀 Running the Project
 After building, run the executable:
 ```bash
 ./run        # Run the default build
