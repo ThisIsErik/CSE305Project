@@ -4,7 +4,6 @@
 
 std::pair<std::vector<int>, std::vector<int>> MyersMillerAligner::forward_pass(
     const std::string& A, const std::string& B, 
-    int start_i, int end_i, int start_j, int end_j) {
     
     int rows = end_i - start_i + 1;
     int cols = end_j - start_j + 1;
