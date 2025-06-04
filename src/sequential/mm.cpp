@@ -1,234 +1,280 @@
 #include "mm.h"
-#include <algorithm>
-#include <limits>
-#include <tuple>
+#include <iostream>
+#include <climits>
 
-const int MIN = std::numeric_limits<int>::min() / 2;
 
-AlignmentData forward_pass(
-    const std::string& A,
-    const std::string& B,
-    int match_score,
-    int mismatch_score,
-    int gap_open,
-    int gap_extend,
-    int start_i,
-    int end_i,
-    int start_j,
-    int end_j) {
-
-    int m = end_i - start_i;
-    int n = end_j - start_j;
-
-    AlignmentData data;
-    data.M.resize(n + 1);
-    data.Iy.resize(n + 1);
-    data.Ix.resize(n + 1);
-
-    data.M[0] = 0;
-    data.Iy[0] = MIN;
-    data.Ix[0] = MIN;
-
-    for (int j = 1; j <= n; ++j) {
-        data.M[j] = gap_open + (j - 1) * gap_extend;
-        data.Iy[j] = gap_open + (j - 1) * gap_extend;
-        data.Ix[j] = MIN;
+std::pair<std::vector<int>, std::vector<int>> MyersMillerAligner::forward_pass(
+    const std::string& A, const std::string& B, 
+    int start_i, int end_i, int start_j, int end_j) {
+    
+    int rows = end_i - start_i + 1;
+    int cols = end_j - start_j + 1;
+    
+    std::vector<int> curr(cols, INT_MIN);
+    std::vector<int> curr_gap(cols, INT_MIN);
+    std::vector<int> prev(cols, INT_MIN);
+    
+    curr[0] = 0; //init the first row
+    for (int j = 1; j < cols; j++) {
+        curr[j] = curr[j-1] + gap_score;
+        curr_gap[j] = curr[j];
     }
+    
+    for (int i = 1; i < rows; i++) { //filling the dp table
+        prev = curr;
+        curr[0] = prev[0] + gap_score;
+        curr_gap[0] = curr[0];
+        
+        for (int j = 1; j < cols; j++) {
+            char a_char = A[start_i + i - 1];
+            char b_char = B[start_j + j - 1];
+            int score = (a_char == b_char) ? match_score : mismatch_score;
 
-    std::vector<int> prev_M = data.M;
-    std::vector<int> prev_Ix = data.Ix;
-    std::vector<int> prev_Iy = data.Iy;
-
-    for (int i = 1; i <= m; ++i) {
-        std::vector<int> curr_M(n + 1);
-        std::vector<int> curr_Ix(n + 1);
-        std::vector<int> curr_Iy(n + 1);
-
-        curr_Ix[0] = gap_open + (i - 1) * gap_extend;
-        curr_Iy[0] = MIN;
-        curr_M[0] = curr_Ix[0];
-
-        for (int j = 1; j <= n; ++j) {
-            int a_idx = start_i + i - 1;
-            int b_idx = start_j + j - 1;
-            int score_sub = (A[a_idx] == B[b_idx]) ? match_score : mismatch_score;
-
-            curr_M[j] = std::max({prev_M[j - 1], prev_Ix[j - 1], prev_Iy[j - 1]}) + score_sub;
-            curr_Ix[j] = std::max(prev_M[j] + gap_open, prev_Ix[j] + gap_extend);
-            curr_Iy[j] = std::max(curr_M[j - 1] + gap_open, curr_Iy[j - 1] + gap_extend);
+            int diagonal = prev[j-1] + score; //get reg score
+            int left = curr[j-1] + gap_score;
+            int up = prev[j] + gap_score;
+            
+            curr[j] = std::max({diagonal, left, up});
+            
+            curr_gap[j] = std::max(curr_gap[j-1] + gap_score, curr[j-1] + gap_score); //get gap extension score
         }
-
-        prev_M = curr_M;
-        prev_Ix = curr_Ix;
-        prev_Iy = curr_Iy;
     }
-
-    data.M = prev_M;
-    data.Iy = prev_Iy;
-    data.Ix = prev_Ix;
-    return data;
+    
+    return {curr, curr_gap};
 }
 
-AlignmentData reverse_pass(
-    const std::string& A,
-    const std::string& B,
-    int match_score,
-    int mismatch_score,
-    int gap_open,
-    int gap_extend,
-    int start_i,
-    int end_i,
-    int start_j,
-    int end_j) {
-
-    int m = end_i - start_i;
-    int n = end_j - start_j;
-
-    AlignmentData data;
-    data.M.resize(n + 1);
-    data.Iy.resize(n + 1);
-    data.Ix.resize(n + 1);
-
-    data.M[n] = 0;
-    data.Iy[n] = MIN;
-    data.Ix[n] = MIN;
-
-    for (int j = n - 1; j >= 0; --j) {
-        data.M[j] = gap_open + (n - j - 1) * gap_extend;
-        data.Iy[j] = gap_open + (n - j - 1) * gap_extend;
-        data.Ix[j] = MIN;
+std::pair<std::vector<int>, std::vector<int>> MyersMillerAligner::backward_pass(
+    const std::string& A, const std::string& B, 
+    int start_i, int end_i, int start_j, int end_j) {
+    
+    int rows = end_i - start_i + 1;
+    int cols = end_j - start_j + 1;
+    
+    std::vector<int> curr(cols, INT_MIN);
+    std::vector<int> curr_gap(cols, INT_MIN);
+    std::vector<int> prev(cols, INT_MIN); //same as before
+    
+    curr[cols-1] = 0; //now we initialize the last row and work backwards
+    for (int j = cols-2; j >= 0; j--) {
+        curr[j] = curr[j+1] + gap_score;
+        curr_gap[j] = curr[j];
     }
+    
+    for (int i = rows-2; i >= 0; i--) {
+        prev = curr;
+        curr[cols-1] = prev[cols-1] + gap_score;
+        curr_gap[cols-1] = curr[cols-1];
+        
+        for (int j = cols-2; j >= 0; j--) {
+            char a_char = A[start_i + i];
+            char b_char = B[start_j + j];
+            int score = (a_char == b_char) ? match_score : mismatch_score;
 
-    std::vector<int> next_M = data.M;
-    std::vector<int> next_Ix = data.Ix;
-    std::vector<int> next_Iy = data.Iy;
+            int diagonal = prev[j+1] + score;
+            int right = curr[j+1] + gap_score;
+            int down = prev[j] + gap_score;
+            
+            curr[j] = std::max({diagonal, right, down});
 
-    for (int i = m - 1; i >= 0; --i) {
-        std::vector<int> curr_M(n + 1);
-        std::vector<int> curr_Ix(n + 1);
-        std::vector<int> curr_Iy(n + 1);
-
-        curr_Ix[n] = gap_open + (m - i - 1) * gap_extend;
-        curr_Iy[n] = MIN;
-        curr_M[n] = curr_Ix[n];
-
-        for (int j = n - 1; j >= 0; --j) {
-            int a_idx = start_i + i;
-            int b_idx = start_j + j;
-            int score_sub = (A[a_idx] == B[b_idx]) ? match_score : mismatch_score;
-
-            curr_M[j] = std::max({next_M[j + 1], next_Ix[j + 1], next_Iy[j + 1]}) + score_sub;
-            curr_Ix[j] = std::max(next_M[j] + gap_open, next_Ix[j] + gap_extend);
-            curr_Iy[j] = std::max(curr_M[j + 1] + gap_open, curr_Iy[j + 1] + gap_extend);
+            curr_gap[j] = std::max(curr_gap[j+1] + gap_score, curr[j+1] + gap_score);
         }
-
-        next_M = curr_M;
-        next_Ix = curr_Ix;
-        next_Iy = curr_Iy;
     }
-
-    data.M = next_M;
-    data.Iy = next_Iy;
-    data.Ix = next_Ix;
-    return data;
+    
+    return {curr, curr_gap};
 }
 
-AlignmentResult align_recursive(
-    const std::string& A,
-    const std::string& B,
-    int match_score,
-    int mismatch_score,
-    int gap_open,
-    int gap_extend,
-    int start_i,
-    int end_i,
-    int start_j,
-    int end_j) {
-
-    if (end_i - start_i == 0) {
-        std::string a_gaps(end_j - start_j, '-');
-        std::string b_part = B.substr(start_j, end_j - start_j);
-        int score = (end_j - start_j > 0) ? gap_open + (end_j - start_j - 1) * gap_extend : 0;
-        return {a_gaps, b_part, score};
+std::pair<int, bool> MyersMillerAligner::find_midpoint(
+    const std::vector<int>& forward_scores,
+    const std::vector<int>& forward_gap_scores,
+    const std::vector<int>& backward_scores,
+    const std::vector<int>& backward_gap_scores,
+    int cols) {
+    
+    int max_score = INT_MIN;
+    int best_j = 0;
+    bool use_gap = false;
+    
+    for (int j = 0; j < cols; j++) {
+        int score1 = forward_scores[j] + backward_scores[j]; //type 1 is reg alignment
+        int score2 = forward_gap_scores[j] + backward_gap_scores[j]; //type 2 gap alginemnt
+        
+        if (score1 > max_score) {
+            max_score = score1;
+            best_j = j;
+            use_gap = false;
+        }
+        
+        if (score2 > max_score) {
+            max_score = score2;
+            best_j = j;
+            use_gap = true;
+        }
     }
+    
+    return {best_j, use_gap};
+}
 
-    if (end_j - start_j == 0) {
-        std::string a_part = A.substr(start_i, end_i - start_i);
-        std::string b_gaps(end_i - start_i, '-');
-        int score = (end_i - start_i > 0) ? gap_open + (end_i - start_i - 1) * gap_extend : 0;
-        return {a_part, b_gaps, score};
+std::vector<AlignOp> MyersMillerAligner::align_recursive(
+    const std::string& A, const std::string& B,
+    int start_i, int end_i, int start_j, int end_j) {
+    
+    std::vector<AlignOp> result;
+
+    if (start_i >= end_i && start_j >= end_j) { //base case
+        return result; //empty alignment
     }
-
-    if (end_i - start_i == 1 || end_j - start_j == 1) {
-        auto dp = needleman_wunsh_dp(
-            A.substr(start_i, end_i - start_i),
-            B.substr(start_j, end_j - start_j),
-            mismatch_score,
-            match_score,
-            gap_open + gap_extend
-        );
-        auto alignment = needleman_wunsh_traceback(
-            dp,
-            A.substr(start_i, end_i - start_i),
-            B.substr(start_j, end_j - start_j),
-            match_score,
-            mismatch_score,
-            gap_open + gap_extend
-        );
-
-        int score = 0;
-        bool in_gap_a = false, in_gap_b = false;
-        for (size_t k = 0; k < alignment.first.size(); ++k) {
-            char a_char = alignment.first[k];
-            char b_char = alignment.second[k];
-            if (a_char == '-') {
-                score += in_gap_a ? gap_extend : gap_open;
-                in_gap_a = true;
-                in_gap_b = false;
-            } else if (b_char == '-') {
-                score += in_gap_b ? gap_extend : gap_open;
-                in_gap_b = true;
-                in_gap_a = false;
-            } else {
-                score += (a_char == b_char) ? match_score : mismatch_score;
-                in_gap_a = in_gap_b = false;
+    
+    if (start_i >= end_i) { //only insertions
+        for (int j = start_j; j < end_j; j++) {
+            result.push_back(AlignOp(AlignOp::INSERT, 0, B[j]));
+        }
+        return result;
+    }
+    
+    if (start_j >= end_j) { //only deletions
+        for (int i = start_i; i < end_i; i++) {
+            result.push_back(AlignOp(AlignOp::DELETE, A[i], 0));
+        }
+        return result;
+    }
+    
+    if (end_i - start_i == 1) {
+        char a_char = A[start_i];
+        
+        int best_score = INT_MIN; //looking for best alignment is A only has one char
+        int best_j = start_j;
+        bool best_is_match = false;
+        
+        //either delete A[start_i] and insert all of B
+        int delete_score = gap_score + (end_j - start_j) * gap_score;
+        if (delete_score > best_score) {
+            best_score = delete_score;
+            best_j = start_j;
+            best_is_match = false;
+        }
+        
+        //either try aligning A[start_i] with each B[j]
+        for (int j = start_j; j < end_j; j++) {
+            char b_char = B[j];
+            int align_score = (a_char == b_char) ? match_score : mismatch_score;
+            align_score += (j - start_j) * gap_score; //insertions before
+            align_score += (end_j - j - 1) * gap_score; //insertions after
+            
+            if (align_score > best_score) {
+                best_score = align_score;
+                best_j = j;
+                best_is_match = true;
             }
         }
-        return {alignment.first, alignment.second, score};
-    }
-
-    int mid_i = start_i + (end_i - start_i) / 2;
-    auto forward = forward_pass(A, B, match_score, mismatch_score, gap_open, gap_extend, start_i, mid_i, start_j, end_j);
-    auto reverse = reverse_pass(A, B, match_score, mismatch_score, gap_open, gap_extend, mid_i, end_i, start_j, end_j);
-
-    int best_j = start_j;
-    int best_score = MIN;
-    for (int j = 0; j <= end_j - start_j; ++j) {
-        int current_score = forward.M[j] + reverse.M[j];
-        if (current_score > best_score) {
-            best_score = current_score;
-            best_j = start_j + j;
+        if (best_is_match) {
+            for (int j = start_j; j < best_j; j++) {
+                result.push_back(AlignOp(AlignOp::INSERT, 0, B[j]));
+            }
+            if (a_char == B[best_j]) { //match or mismatch
+                result.push_back(AlignOp(AlignOp::MATCH, a_char, B[best_j]));
+            } else {
+                result.push_back(AlignOp(AlignOp::MISMATCH, a_char, B[best_j]));
+            }
+            for (int j = best_j + 1; j < end_j; j++) {
+                result.push_back(AlignOp(AlignOp::INSERT, 0, B[j]));
+            }
+        } else {
+            result.push_back(AlignOp(AlignOp::DELETE, a_char, 0));
+            for (int j = start_j; j < end_j; j++) {
+                result.push_back(AlignOp(AlignOp::INSERT, 0, B[j]));
+            }
         }
+        
+        return result;
     }
-
-    auto left = align_recursive(A, B, match_score, mismatch_score, gap_open, gap_extend, start_i, mid_i, start_j, best_j);
-    auto right = align_recursive(A, B, match_score, mismatch_score, gap_open, gap_extend, mid_i, end_i, best_j, end_j);
-
-    return {
-        left.seq_a + right.seq_a,
-        left.seq_b + right.seq_b,
-        left.score + right.score
-    };
+    int mid_i = start_i + (end_i - start_i) / 2;
+    auto forward_result = forward_pass(A, B, start_i, mid_i, start_j, end_j);
+    auto backward_result = backward_pass(A, B, mid_i, end_i, start_j, end_j);
+    
+    auto midpoint = find_midpoint(forward_result.first, forward_result.second,
+                                 backward_result.first, backward_result.second,
+                                 end_j - start_j + 1);
+    
+    int mid_j = start_j + midpoint.first;
+    
+    auto left_ops = align_recursive(A, B, start_i, mid_i, start_j, mid_j);
+    auto right_ops = align_recursive(A, B, mid_i, end_i, mid_j, end_j);
+    
+    result.insert(result.end(), left_ops.begin(), left_ops.end());
+    result.insert(result.end(), right_ops.begin(), right_ops.end());
+    
+    return result;
 }
 
-std::tuple<std::string, std::string, int> myers_miller_align(
-    const std::string& A,
-    const std::string& B,
-    int match_score,
-    int mismatch_score,
-    int gap_open,
-    int gap_extend) {
+std::pair<std::string, std::string> MyersMillerAligner::ops_to_strings(const std::vector<AlignOp>& ops) {
+    std::string aligned_A, aligned_B;
+    
+    for (const auto& op : ops) {
+        switch (op.type) {
+            case AlignOp::MATCH:
+            case AlignOp::MISMATCH:
+                aligned_A += op.a_char;
+                aligned_B += op.b_char;
+                break;
+            case AlignOp::DELETE:
+                aligned_A += op.a_char;
+                aligned_B += '-';
+                break;
+            case AlignOp::INSERT:
+                aligned_A += '-';
+                aligned_B += op.b_char;
+                break;
+        }
+    }
+    
+    return {aligned_A, aligned_B};
+}
 
-    auto result = align_recursive(A, B, match_score, mismatch_score, gap_open, gap_extend, 0, A.size(), 0, B.size());
-    return std::make_tuple(result.seq_a, result.seq_b, result.score);
+int MyersMillerAligner::calculate_score(const std::vector<AlignOp>& ops) {
+    int score = 0;
+    
+    for (const auto& op : ops) {
+        switch (op.type) {
+            case AlignOp::MATCH:
+                score += match_score;
+                break;
+            case AlignOp::MISMATCH:
+                score += mismatch_score;
+                break;
+            case AlignOp::DELETE:
+            case AlignOp::INSERT:
+                score += gap_score;
+                break;
+        }
+    }
+    
+    return score;
+}
+
+MMResult MyersMillerAligner::align(const std::string& A, const std::string& B) {
+    if (A.empty() && B.empty()) {
+        return {{"", ""}, 0};
+    }
+    
+    if (A.empty()) {
+        std::string gaps(B.length(), '-');
+        return {{gaps, B}, static_cast<int>(B.length()) * gap_score};
+    }
+    
+    if (B.empty()) {
+        std::string gaps(A.length(), '-');
+        return {{A, gaps}, static_cast<int>(A.length()) * gap_score};
+    }
+    
+    auto ops = align_recursive(A, B, 0, A.length(), 0, B.length());
+    auto aligned_strings = ops_to_strings(ops);
+    int score = calculate_score(ops);
+    
+    return {aligned_strings, score};
+}
+
+MMResult myers_miller_align(const std::string& A, const std::string& B, 
+                           int match, int mismatch, int gap) {
+    MyersMillerAligner aligner(match, mismatch, gap);
+    return aligner.align(A, B);
 }
