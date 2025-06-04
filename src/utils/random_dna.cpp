@@ -27,7 +27,7 @@ std::string generate_similar_dna(size_t length, double similarity, const std::st
    static std::uniform_int_distribution<> base_dist(0, 3);
   
    std::string sequence; //the new sequecne we are making
-   sequence.resize(length);
+   sequence.reserve(length);
   
     if (reference.empty() || similarity == 0.0) {
         for (size_t i = 0; i < length; ++i) {
