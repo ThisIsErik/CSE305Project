@@ -63,7 +63,7 @@ int main() {
     int succ_scoreonly_sw = 0;
     
     for (size_t length_seq= 10; length_seq < 13; ++length_seq) {
-        for(size_t repetitions = 0; repetitions < 1; ++repetitions) {
+        for(size_t repetitions = 0; repetitions < 0; ++repetitions) {
             std::string refA = generate_random_dna(1<<length_seq);
             std::string refB = generate_random_dna(1<<length_seq);
             std::cout << "DNA sequences generated."<< "\n";
@@ -75,10 +75,7 @@ int main() {
             std::cout << "Sequential SW implementation finished. (score = " << sw_seq.first[sw_seq.second.first][sw_seq.second.second] << ")\n";
 
             auto simiA = generate_random_dna(1<<length_seq);
-            // std::cout << "SimiA: " << simiA << "\n";
             auto simiB = generate_similar_dna(1<<length_seq, 0.5, simiA);
-            // auto simiB = generate_random_dna(1<<length_seq);
-            // std::cout << "SimiB: " << simiB << "\n";
             auto start_seq_nw = std::chrono::high_resolution_clock::now();
             auto nw_dp = needleman_wunsh_dp(simiA, simiB, -1, 1, -2);
             auto nw_alignment = needleman_wunsh_traceback(nw_dp, simiA, simiB, 1, -1, -2);
