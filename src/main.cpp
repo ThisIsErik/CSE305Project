@@ -11,11 +11,6 @@
 #include "parallel/sw_diagonal_score_only.h"
 #include "parallel/sw_diagonal_score_only_tp.h"
 
-#include "parallel/mm/mm_parallel_database.h"
-#include "parallel/mm/mm_diagonal_wavefront_tp.h"
-#include "parallel/mm/mm_diagonal_wavefront.h"
-#include "parallel/mm/mm_diagonal_score_only.h"
-
 #include "tests.h"
 #include "utils/performance_test.h"
 #include <vector>
