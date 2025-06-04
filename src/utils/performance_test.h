@@ -65,8 +65,8 @@ auto function_test_random(Func func, size_t lenA, size_t lenB, int mi, int ma, i
 
 template <typename Func>
 std::vector<double> function_test_threads(Func func, std::vector<int> num_threads = {1,2,4,8,16}) {
-    std::string A = generate_random_dna(1<<15);
-    std::string B = generate_random_dna(1<<15);
+    std::string A = generate_random_dna(1<<14);
+    std::string B = generate_random_dna(1<<14);
     std::vector<double> times;
     for(int i: num_threads){
         double time = function_test_timer(func, A, B, -1, 1, -2, i);
