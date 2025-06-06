@@ -25,6 +25,7 @@ std::string generate_similar_dna(size_t length, double similarity, const std::st
    static std::mt19937 gen(rd());
    static std::uniform_real_distribution<double> prob_dist(0.0, 1.0);
    static std::uniform_int_distribution<> base_dist(0, 3);
+   static std::uniform_int_distribution<> diff_dist(1, 3);
   
    std::string sequence; //the new sequecne we are making
    sequence.reserve(length);
@@ -53,7 +54,6 @@ std::string generate_similar_dna(size_t length, double similarity, const std::st
            else{
                size_t temp_index = 0;
                    while(nucleotides[temp_index]!=reference[indices[i]]) temp_index++;
-                   static std::uniform_int_distribution<> diff_dist(1, 3);
                    sequence.push_back(nucleotides[(temp_index+diff_dist(gen))%4]);
            }
        }
@@ -77,7 +77,6 @@ std::string generate_similar_dna(size_t length, double similarity, const std::st
                else{
                    size_t temp_index = 0;
                    while(nucleotides[temp_index]!=reference[curr_index]) temp_index++;
-                   static std::uniform_int_distribution<> diff_dist(1, 3);
                    sequence.push_back(nucleotides[(temp_index+diff_dist(gen))%4]);
                }
                curr_index++;
