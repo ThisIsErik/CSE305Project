@@ -23,7 +23,16 @@
 #endif
 
 
-int main() {
+int main(int argc, char* argv[]) {
+    if (argc < 2) {
+        std::cout << "Usage: ./run <mode>\n";
+        std::cout << "Available modes: corectness, thread, size, similarity, memory\n";
+        return 1;
+    }
+    std::string mode = argv[1];
+
+    if (mode == "corectness") {
+    //#################  Sanity check that sequential baselines works  #######################
     std::string A = "TAGC";
     std::string B = "TAGTC";
 
@@ -36,35 +45,24 @@ int main() {
     std::cout << "Aligned A: " << nw_aligned.first << "\n";
     std::cout << "Aligned B: " << nw_aligned.second << "\n";
 
+    std::pair<int, std::pair<std::string, std::string>> mm_aligned = myers_miller(A, B, 1, -1, -2);
+    std::cout << "Myers-Miller Alignment:\n";
+    std::cout << "Aligned A: " << mm_aligned.second.first << "\n";
+    std::cout << "Aligned B: " << mm_aligned.second.second << "\n";
+
     std::pair<std::vector<std::vector<int>>, std::pair<int,int>> sw_dp = smith_waterman_dp(A, B, -1, 1, -2);
     std::pair<std::string, std::string> sw_aligned = smith_waterman_traceback(sw_dp.first, A, B, 1, -1, -2, sw_dp.second);
     std::cout << "Smith-Waterman Score: " << sw_dp.first[sw_dp.second.first][sw_dp.second.second] << "\n";
     std::cout << "Aligned A: " << sw_aligned.first << "\n";
     std::cout << "Aligned B: " << sw_aligned.second << "\n";
 
-    std::pair<int, std::pair<std::string, std::string>> mm_aligned = myers_miller(A, B, 1, -1, -2);
-    std::cout << "Myers-Miller Alignment:\n";
-    std::cout << "Aligned A: " << mm_aligned.second.first << "\n";
-    std::cout << "Aligned B: " << mm_aligned.second.second << "\n";
-
-    //First parallel implementation. Create a dictionary of 1000 sequences of bases
-    std::string query = generate_random_dna(1000);
-    std::vector<std::string> database;
-    database.reserve(1000);
-    double length_step = static_cast<double>(1000 - 500) / (1000 - 1); //create sequences of length 1000,999,...,500
-    for (int i = 0; i < 1000; ++i) {
-        int current_length = 1000 - static_cast<int>(i * length_step);
-        database.push_back(generate_random_dna(current_length));
-    }
-    std::cout << "Database generated "<< "\n";
-
-    //#################  Sanity check that diagonal wavefront works  #######################
+    //#################  Check that paralllel algorithms work  #######################
     int succ_par = 0;
     int succ_cuda = 0;
     int succ_scoreonly_sw = 0;
     
-    for (size_t length_seq= 10; length_seq < 13; ++length_seq) {
-        for(size_t repetitions = 0; repetitions < 3; ++repetitions) {
+    for (size_t length_seq= 10; length_seq < 14; ++length_seq) {
+        for(size_t repetitions = 0; repetitions < 1; ++repetitions) {
             std::string refA = generate_random_dna(1<<length_seq);
             std::string refB = generate_random_dna(1<<length_seq);
             std::cout << "DNA sequences generated."<< "\n";
@@ -130,7 +128,6 @@ int main() {
             std::cout << "CUDA implementation finished."<< "\n";
             #endif
             
-
             succ_par = Check_Matrix_Matrix(sw_seq, sw_par);
             if (succ_par == -1) {
                 std::cerr << "Test failed for SW parallel implementation" << length_seq << "\n";
@@ -175,274 +172,285 @@ int main() {
             std::cout << "Speedup cuda - sequential:  " << speedup_cuda << "x\n";
             #endif
             std::cout << "\n";
+            }
         }
     }
+    if (mode == "thread") {
+    /////////////////////// Number threads comparison ///////////////////////////////////////
+    std::vector<int> num_threads = {2,3,4};
+    std::string refA = generate_random_dna(1<<15);
+    std::string refB = generate_random_dna(1<<15);
+    auto start_seq_sw = std::chrono::high_resolution_clock::now();
+    auto sw_seq = smith_waterman_dp(refA, refB, -1, 1, -2);
+    auto end_seq_sw = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> seq_timing_temp_sw = end_seq_sw - start_seq_sw;
+    double seq_timing_sw = seq_timing_temp_sw.count();
+    std::cout << "Sequential (sw): " << seq_timing_sw << "\n";
 
-    ///////////////////////// Num threads comparison ////////////////////////////////////////////////////
-    // std::vector<int> num_threads = {2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20};
-    // std::string refA = generate_random_dna(1<<15);
-    // std::string refB = generate_random_dna(1<<15);
-    // auto start_seq_sw = std::chrono::high_resolution_clock::now();
-    // auto sw_seq = smith_waterman_dp(refA, refB, -1, 1, -2);
-    // auto end_seq_sw = std::chrono::high_resolution_clock::now();
-    // std::chrono::duration<double> seq_timing_temp_sw = end_seq_sw - start_seq_sw;
-    // double seq_timing_sw = seq_timing_temp_sw.count();
-    // std::cout << "Sequential (sw): " << seq_timing_sw << "\n";
+    // Local alignment
+    auto timing = function_test_threads(SmithWatermanWavefront, num_threads);
+    std::cout << "Regular: ";
+    for(auto i: timing){
+        std::cout << i <<" (" << seq_timing_sw/i<< ") |";
+    }
+    std::cout << "\n\n";
 
-    // // Local alignment
-    // auto timing = function_test_threads(SmithWatermanWavefront, num_threads);
-    // std::cout << "Regular: ";
-    // for(auto i: timing){
-    //     std::cout << i <<" (" << seq_timing_sw/i<< ") |";
-    // }
-    // std::cout << "\n\n";
+    timing = function_test_threads(SmithWatermanWavefrontTp, num_threads);
+    std::cout << "Threadpool: ";
+    for(auto i: timing){
+        std::cout << i <<" (" << seq_timing_sw/i<< ") |";
+    }
+    std::cout << "\n\n";
 
-    // timing = function_test_threads(SmithWatermanWavefrontTp, num_threads);
-    // std::cout << "Threadpool: ";
-    // for(auto i: timing){
-    //     std::cout << i <<" (" << seq_timing_sw/i<< ") |";
-    // }
-    // std::cout << "\n\n";
+    timing = function_test_threads(SmithWatermanWavefront_ScoreOnly, num_threads);
+    std::cout << "Score only: ";
+    for(auto i: timing){
+        std::cout << i <<" (" << seq_timing_sw/i<< ") |";
+    }
+    std::cout << "\n\n";
 
-    // timing = function_test_threads(SmithWatermanWavefront_ScoreOnly, num_threads);
-    // std::cout << "Score only: ";
-    // for(auto i: timing){
-    //     std::cout << i <<" (" << seq_timing_sw/i<< ") |";
-    // }
-    // std::cout << "\n\n";
+    timing = function_test_threads(SmithWatermanWavefront_ScoreOnly_Tp, num_threads);
+    std::cout << "Score only + TP: ";
+    for(auto i: timing){
+        std::cout << i <<" (" << seq_timing_sw/i<< ") |";
+    }
+    std::cout << "\n\n";
 
-    // timing = function_test_threads(SmithWatermanWavefront_ScoreOnly_Tp, num_threads);
-    // std::cout << "Score only + TP: ";
-    // for(auto i: timing){
-    //     std::cout << i <<" (" << seq_timing_sw/i<< ") |";
-    // }
-    // std::cout << "\n\n";
+    // Global alignment:
+    std::string simiA = generate_random_dna(1<<15);
+    std::string simiB = generate_similar_dna(1<<15, 0.9, simiA);
 
-    // // Global alignment:
-    // std::string simiA = generate_random_dna(1<<15);
-    // std::string simiB = generate_similar_dna(1<<15, 0.9, simiA);
+    auto start_seq_nw = std::chrono::high_resolution_clock::now();
+    auto nw_dp_threads = needleman_wunsh_dp(simiA, simiB, -1, 1, -2);
+    auto nw_alignment_threads = needleman_wunsh_traceback(nw_dp_threads, simiA, simiB, 1, -1, -2);
+    int nw_score = 0;
+    for (size_t i = 0; i < nw_alignment_threads.first.size(); ++i) {
+        char a = nw_alignment_threads.first[i];
+        char b = nw_alignment_threads.second[i];
+        if (a == '-' || b == '-') nw_score += -2;
+        else nw_score += (a == b ? 1 : -1);
+    }
+    auto end_seq_nw = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> duration_seq_nw = end_seq_nw - start_seq_nw;
+    std::cout << "Reference sequential nw time: " << duration_seq_nw.count() << "\n";
 
-    // auto start_seq_nw = std::chrono::high_resolution_clock::now();
-    // auto nw_dp_threads = needleman_wunsh_dp(simiA, simiB, -1, 1, -2);
-    // auto nw_alignment_threads = needleman_wunsh_traceback(nw_dp_threads, simiA, simiB, 1, -1, -2);
-    // int nw_score = 0;
-    // for (size_t i = 0; i < nw_alignment_threads.first.size(); ++i) {
-    //     char a = nw_alignment_threads.first[i];
-    //     char b = nw_alignment_threads.second[i];
-    //     if (a == '-' || b == '-') nw_score += -2;
-    //     else nw_score += (a == b ? 1 : -1);
-    // }
-    // auto end_seq_nw = std::chrono::high_resolution_clock::now();
-    // std::chrono::duration<double> duration_seq_nw = end_seq_nw - start_seq_nw;
-    // std::cout << "Reference sequential nw time: " << duration_seq_nw.count() << "\n";
+    auto start_seq_mm = std::chrono::high_resolution_clock::now();
+    auto [mm_score, mm_alignment] = myers_miller(simiA, simiB, 1, -1, -2);
+    auto end_seq_mm = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> duration_seq_mm = end_seq_mm - start_seq_mm;
+    std::cout << "Reference sequential mm time: " << duration_seq_mm.count() << "\n";
 
-    // auto start_seq_mm = std::chrono::high_resolution_clock::now();
-    // auto [mm_score, mm_alignment] = myers_miller(simiA, simiB, 1, -1, -2);
-    // auto end_seq_mm = std::chrono::high_resolution_clock::now();
-    // std::chrono::duration<double> duration_seq_mm = end_seq_mm - start_seq_mm;
-    // std::cout << "Reference sequential mm time: " << duration_seq_mm.count() << "\n";
+    auto timing_global = function_test_threads(NeedlemanWunschWavefront, num_threads);
+    std::cout << "Parallel NW (wrt NW)";
+    for(auto i: timing_global){
+        std::cout << i <<" (" << duration_seq_nw.count()/i<< ") |";
+    }
+    std::cout << "\n\n";
+    std::cout << "Parallel NW (wrt MM)";
+    for(auto i: timing_global){
+        std::cout << i <<" (" << duration_seq_mm.count()/i<< ") |";
+    }
+    std::cout << "\n\n";
+    }
 
-    // auto timing_global = function_test_threads(NeedlemanWunschWavefront, num_threads);
-    // std::cout << "Parallel NW (wrt NW)";
-    // for(auto i: timing_global){
-    //     std::cout << i <<" (" << duration_seq_nw.count()/i<< ") |";
-    // }
-    // std::cout << "\n\n";
-    // std::cout << "Parallel NW (wrt MM)";
-    // for(auto i: timing_global){
-    //     std::cout << i <<" (" << duration_seq_mm.count()/i<< ") |";
-    // }
-    // std::cout << "\n\n";
+    if (mode == "size") {
+    //////////////////////////// Size comparison //////////////////////////////////////
+    std::vector<int> sizes = {1<<11, 1<<12, 1<<13};
 
-
-    //////////////////////////////SIZE COMPARISON///////////////////////////////////////////////////////////////////
-    // std::vector<int> sizes = {1<<11, 1<<12, 1<<13, 1<<14, 1<<15, 1<<16, 1<<17};
-
-    // // Local Alignment
-    // std::vector<double> seq_timings;
-    // std::vector<double> gpu_timings;
-    // for(int i: sizes){
-    //     std::string refA = generate_random_dna(i);
-    //     std::string refB = generate_random_dna(i);  
+    // Local Alignment
+    std::vector<double> seq_timings;
+    std::vector<double> gpu_timings;
+    for(int i: sizes){
+        std::string refA = generate_random_dna(i);
+        std::string refB = generate_random_dna(i);  
         
-    //     auto start_seq_sw = std::chrono::high_resolution_clock::now();
-    //     auto sw_seq = smith_waterman_dp(refA, refB, -1, 1, -2);
-    //     auto end_seq_sw = std::chrono::high_resolution_clock::now();
-    //     std::chrono::duration<double> seq_timing_temp = end_seq_sw - start_seq_sw;
-    //     seq_timings.push_back(seq_timing_temp.count());
-    //     int res_seq = sw_seq.first[sw_seq.second.first][sw_seq.second.second];
+        auto start_seq_sw = std::chrono::high_resolution_clock::now();
+        auto sw_seq = smith_waterman_dp(refA, refB, -1, 1, -2);
+        auto end_seq_sw = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double> seq_timing_temp = end_seq_sw - start_seq_sw;
+        seq_timings.push_back(seq_timing_temp.count());
+        int res_seq = sw_seq.first[sw_seq.second.first][sw_seq.second.second];
 
-    //     #ifdef USE_CUDA
-    //     auto start_cuda = std::chrono::high_resolution_clock::now();
-    //     auto cuda_result = CUDAlign(refA, refB, -1, 1, -2);
-    //     auto end_cuda = std::chrono::high_resolution_clock::now();
-    //     std::chrono::duration<double> duration_cuda = end_cuda - start_cuda;
-    //     gpu_timings.push_back(duration_cuda.count());
-    //     int res_gpu = std::get<0>(cuda_result);
-    //     if(res_gpu!=res_seq){
-    //         std::cout << "Incorrect results: " << res_seq << " / " << res_gpu << "\n";
-    //     }
-    //     #endif
-    // }
-    // std::cout << "Seq (SW): ";
-    // for(auto i: seq_timings){
-    //     std::cout << i << " ";
-    // }
-    // std::cout << "\n\n";
+        #ifdef USE_CUDA
+        auto start_cuda = std::chrono::high_resolution_clock::now();
+        auto cuda_result = CUDAlign(refA, refB, -1, 1, -2);
+        auto end_cuda = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double> duration_cuda = end_cuda - start_cuda;
+        gpu_timings.push_back(duration_cuda.count());
+        int res_gpu = std::get<0>(cuda_result);
+        if(res_gpu!=res_seq){
+            std::cout << "Incorrect results: " << res_seq << " / " << res_gpu << "\n";
+        }
+        #endif
+    }
+    std::cout << "Seq (SW): ";
+    for(auto i: seq_timings){
+        std::cout << i << " ";
+    }
+    std::cout << "\n\n";
 
-    // #ifdef USE_CUDA
-    // std::cout << "GPU: ";
-    // for(int i=0; i<gpu_timings.size(); ++i){
-    //     std::cout << " " << gpu_timings[i] << " (" << seq_timings[i]/gpu_timings[i] << ") |";
-    // }
-    // std::cout << "\n\n";
-    // #endif
+    #ifdef USE_CUDA
+    std::cout << "GPU: ";
+    for(int i=0; i<gpu_timings.size(); ++i){
+        std::cout << " " << gpu_timings[i] << " (" << seq_timings[i]/gpu_timings[i] << ") |";
+    }
+    std::cout << "\n\n";
+    #endif
 
-    // auto timing = function_test_size(SmithWatermanWavefront, sizes, sizes, 8);
-    // std::cout << "Standard parallel: ";
-    // for(int i=0; i<timing.size(); ++i){
-    //     std::cout << " " << timing[i] << " (" << seq_timings[i]/timing[i] << ") |";
-    // }
-    // std::cout << "\n\n";
+    auto timing = function_test_size(SmithWatermanWavefront, sizes, sizes, 8);
+    std::cout << "Standard parallel: ";
+    for(int i=0; i<timing.size(); ++i){
+        std::cout << " " << timing[i] << " (" << seq_timings[i]/timing[i] << ") |";
+    }
+    std::cout << "\n\n";
 
-    // timing = function_test_size(SmithWatermanWavefrontTp, sizes, sizes, 8);
-    // std::cout << "Parallel TP: ";
-    // for(int i=0; i<timing.size(); ++i){
-    //     std::cout << " " << timing[i] << " (" << seq_timings[i]/timing[i] << ") |";
-    // }
-    // std::cout << "\n\n";
+    timing = function_test_size(SmithWatermanWavefrontTp, sizes, sizes, 8);
+    std::cout << "Parallel TP: ";
+    for(int i=0; i<timing.size(); ++i){
+        std::cout << " " << timing[i] << " (" << seq_timings[i]/timing[i] << ") |";
+    }
+    std::cout << "\n\n";
 
-    // timing = function_test_size(SmithWatermanWavefront_ScoreOnly, sizes, sizes, 8);
-    // std::cout << "Parallel score only: ";
-    // for(int i=0; i<timing.size(); ++i){
-    //     std::cout << " " << timing[i] << " (" << seq_timings[i]/timing[i] << ") |";
-    // }
-    // std::cout << "\n\n";
+    timing = function_test_size(SmithWatermanWavefront_ScoreOnly, sizes, sizes, 8);
+    std::cout << "Parallel score only: ";
+    for(int i=0; i<timing.size(); ++i){
+        std::cout << " " << timing[i] << " (" << seq_timings[i]/timing[i] << ") |";
+    }
+    std::cout << "\n\n";
 
-    // timing = function_test_size(SmithWatermanWavefront_ScoreOnly_Tp, sizes, sizes, 8);
-    // std::cout << "Parallel score only + Tp: ";
-    // for(int i=0; i<timing.size(); ++i){
-    //     std::cout << " " << timing[i] << " (" << seq_timings[i]/timing[i] << ") |";
-    // }
-    // std::cout << "\n\n";
+    timing = function_test_size(SmithWatermanWavefront_ScoreOnly_Tp, sizes, sizes, 8);
+    std::cout << "Parallel score only + Tp: ";
+    for(int i=0; i<timing.size(); ++i){
+        std::cout << " " << timing[i] << " (" << seq_timings[i]/timing[i] << ") |";
+    }
+    std::cout << "\n\n";
 
-    // // Global Alignment
-    // std::vector<double> seq_nw_timings;
-    // std::vector<double> seq_mm_timings;
-    // for(int i: sizes){
-    //     std::string simiA = generate_random_dna(i);
-    //     std::string simiB = generate_random_dna(i);  
+    // Global Alignment
+    std::vector<double> seq_nw_timings;
+    std::vector<double> seq_mm_timings;
+    for(int i: sizes){
+        std::string simiA = generate_random_dna(i);
+        std::string simiB = generate_random_dna(i);  
         
-    //     auto start_seq_nw = std::chrono::high_resolution_clock::now();
-    //     auto nw_dp_threads = needleman_wunsh_dp(simiA, simiB, -1, 1, -2);
-    //     auto nw_alignment_threads = needleman_wunsh_traceback(nw_dp_threads, simiA, simiB, 1, -1, -2);
-    //     int nw_score = 0;
-    //     for (size_t i = 0; i < nw_alignment_threads.first.size(); ++i) {
-    //         char a = nw_alignment_threads.first[i];
-    //         char b = nw_alignment_threads.second[i];
-    //         if (a == '-' || b == '-') nw_score += -2;
-    //         else nw_score += (a == b ? 1 : -1);
-    //     }
-    //     auto end_seq_nw = std::chrono::high_resolution_clock::now();
-    //     std::chrono::duration<double> duration_seq_nw = end_seq_nw - start_seq_nw;
-    //     seq_nw_timings.push_back(duration_seq_nw.count());
+        auto start_seq_nw = std::chrono::high_resolution_clock::now();
+        auto nw_dp_threads = needleman_wunsh_dp(simiA, simiB, -1, 1, -2);
+        auto nw_alignment_threads = needleman_wunsh_traceback(nw_dp_threads, simiA, simiB, 1, -1, -2);
+        int nw_score = 0;
+        for (size_t i = 0; i < nw_alignment_threads.first.size(); ++i) {
+            char a = nw_alignment_threads.first[i];
+            char b = nw_alignment_threads.second[i];
+            if (a == '-' || b == '-') nw_score += -2;
+            else nw_score += (a == b ? 1 : -1);
+        }
+        auto end_seq_nw = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double> duration_seq_nw = end_seq_nw - start_seq_nw;
+        seq_nw_timings.push_back(duration_seq_nw.count());
 
-    //     auto start_seq_mm = std::chrono::high_resolution_clock::now();
-    //     auto [mm_score, mm_alignment] = myers_miller(simiA, simiB, 1, -1, -2);
-    //     auto end_seq_mm = std::chrono::high_resolution_clock::now();
-    //     std::chrono::duration<double> duration_seq_mm = end_seq_mm - start_seq_mm;
-    //     seq_mm_timings.push_back(duration_seq_mm.count());
+        auto start_seq_mm = std::chrono::high_resolution_clock::now();
+        auto [mm_score, mm_alignment] = myers_miller(simiA, simiB, 1, -1, -2);
+        auto end_seq_mm = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double> duration_seq_mm = end_seq_mm - start_seq_mm;
+        seq_mm_timings.push_back(duration_seq_mm.count());
 
-    // }
-    // std::cout << "Seq (NW): ";
-    // for(auto i: seq_nw_timings){
-    //     std::cout << i << " ";
-    // }
-    // std::cout << "\n\n";
+    }
+    std::cout << "Seq (NW): ";
+    for(auto i: seq_nw_timings){
+        std::cout << i << " ";
+    }
+    std::cout << "\n\n";
 
-    // std::cout << "Seq (MM): ";
-    // for(auto i: seq_mm_timings){
-    //     std::cout << i << " ";
-    // }
-    // std::cout << "\n\n";
+    std::cout << "Seq (MM): ";
+    for(auto i: seq_mm_timings){
+        std::cout << i << " ";
+    }
+    std::cout << "\n\n";
 
-    // auto timing_global = function_test_size(NeedlemanWunschWavefront, sizes, sizes, 8);
-    // std::cout << "NW parallel wrt NW";
-    // for(int i=0; i<timing_global.size(); ++i){
-    //     std::cout << " " << timing_global[i] << " (" << seq_nw_timings[i]/timing_global[i] << ") |";
-    // }
-    // std::cout << "\n\n";
-    // std::cout << "NW parallel wrt MM";
-    // for(int i=0; i<timing_global.size(); ++i){
-    //     std::cout << " " << timing_global[i] << " (" << seq_mm_timings[i]/timing_global[i] << ") |";
-    // }
-    // std::cout << "\n\n";
+    auto timing_global = function_test_size(NeedlemanWunschWavefront, sizes, sizes, 8);
+    std::cout << "NW parallel wrt NW";
+    for(int i=0; i<timing_global.size(); ++i){
+        std::cout << " " << timing_global[i] << " (" << seq_nw_timings[i]/timing_global[i] << ") |";
+    }
+    std::cout << "\n\n";
+    std::cout << "NW parallel wrt MM";
+    for(int i=0; i<timing_global.size(); ++i){
+        std::cout << " " << timing_global[i] << " (" << seq_mm_timings[i]/timing_global[i] << ") |";
+    }
+    std::cout << "\n\n";
+    }
 
-    //////////////////////// Similarity comparison //////////////////////////////////////////////////////////////
-    // std::vector<double> similarities = {0,0.2,0.4,0.6,0.8,1.0};
-    // std::vector<double> seq_timings;
-    // int size = 1<<14;
-    // for(double i: similarities){
-    //     std::string refA = generate_random_dna(size);
-    //     std::string refB = generate_similar_dna(size, i, refA);  
-    //     auto start_seq_sw = std::chrono::high_resolution_clock::now();
-    //     auto sw_seq = smith_waterman_dp(refA, refB, -1, 1, -2);
-    //     auto end_seq_sw = std::chrono::high_resolution_clock::now();
-    //     std::chrono::duration<double> seq_timing_temp = end_seq_sw - start_seq_sw;
-    //     double seq_timing = seq_timing_temp.count();
-    //     seq_timings.push_back(seq_timing);
-    // }
-    // std::cout << "Seq (SW): ";
-    // for(auto i: seq_timings){
-    //     std::cout << i << " ";
-    // }
-    // std::cout << "\n\n";
+    if (mode == "similarity") {
+     ////////////////////// Similarity comparison /////////////////////////////////////////
+    std::vector<double> similarities = {0,0.2,0.8};
+    std::vector<double> seq_timings;
+    int size = 1<<14;
+    for(double i: similarities){
+        std::string refA = generate_random_dna(size);
+        std::string refB = generate_similar_dna(size, i, refA);  
+        auto start_seq_sw = std::chrono::high_resolution_clock::now();
+        auto sw_seq = smith_waterman_dp(refA, refB, -1, 1, -2);
+        auto end_seq_sw = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double> seq_timing_temp = end_seq_sw - start_seq_sw;
+        double seq_timing = seq_timing_temp.count();
+        seq_timings.push_back(seq_timing);
+    }
+    std::cout << "Seq (SW): ";
+    for(auto i: seq_timings){
+        std::cout << i << " ";
+    }
+    std::cout << "\n\n";
 
-    // auto timing = function_test_similarity(SmithWatermanWavefront, similarities, 8);
-    // std::cout << "Standard parallel: ";
-    // for(int i=0; i<timing.size(); ++i){
-    //     std::cout << " " << timing[i] << " (" << seq_timings[i]/timing[i] << ") |";
-    // }
-    // std::cout << "\n\n";
+    auto timing = function_test_similarity(SmithWatermanWavefront, similarities, 8);
+    std::cout << "Standard parallel: ";
+    for(int i=0; i<timing.size(); ++i){
+        std::cout << " " << timing[i] << " (" << seq_timings[i]/timing[i] << ") |";
+    }
+    std::cout << "\n\n";
 
-    // timing = function_test_similarity(SmithWatermanWavefrontTp, similarities, 8);
-    // std::cout << "Parallel TP: ";
-    // for(int i=0; i<timing.size(); ++i){
-    //     std::cout << " " << timing[i] << " (" << seq_timings[i]/timing[i] << ") |";
-    // }
-    // std::cout << "\n\n";
+    timing = function_test_similarity(SmithWatermanWavefrontTp, similarities, 8);
+    std::cout << "Parallel TP: ";
+    for(int i=0; i<timing.size(); ++i){
+        std::cout << " " << timing[i] << " (" << seq_timings[i]/timing[i] << ") |";
+    }
+    std::cout << "\n\n";
 
-    // timing = function_test_similarity(SmithWatermanWavefront_ScoreOnly, similarities, 8);
-    // std::cout << "Parallel score only: ";
-    // for(int i=0; i<timing.size(); ++i){
-    //     std::cout << " " << timing[i] << " (" << seq_timings[i]/timing[i] << ") |";
-    // }
-    // std::cout << "\n\n";
+    timing = function_test_similarity(SmithWatermanWavefront_ScoreOnly, similarities, 8);
+    std::cout << "Parallel score only: ";
+    for(int i=0; i<timing.size(); ++i){
+        std::cout << " " << timing[i] << " (" << seq_timings[i]/timing[i] << ") |";
+    }
+    std::cout << "\n\n";
 
-    // timing = function_test_similarity(SmithWatermanWavefront_ScoreOnly_Tp, similarities, 8);
-    // std::cout << "Parallel score only + Tp: ";
-    // for(int i=0; i<timing.size(); ++i){
-    //     std::cout << " " << timing[i] << " (" << seq_timings[i]/timing[i] << ") |";
-    // }
-    // std::cout << "\n\n";
+    timing = function_test_similarity(SmithWatermanWavefront_ScoreOnly_Tp, similarities, 8);
+    std::cout << "Parallel score only + Tp: ";
+    for(int i=0; i<timing.size(); ++i){
+        std::cout << " " << timing[i] << " (" << seq_timings[i]/timing[i] << ") |";
+    }
+    std::cout << "\n\n";
 
-    // std::vector<double> gpu_timings;
-    // #ifdef USE_CUDA
-    // for(double i: similarities){
-    //     std::string refA = generate_random_dna(size);
-    //     std::string refB = generate_similar_dna(size, i, refA);  
-    //     auto start_cuda = std::chrono::high_resolution_clock::now();
-    //     auto cuda_result = CUDAlign(refA, refB, -1, 1, -2);
-    //     auto end_cuda = std::chrono::high_resolution_clock::now();
-    //     std::chrono::duration<double> duration_cuda = end_cuda - start_cuda;
-    //     gpu_timings.push_back(duration_cuda.count());
-    // }
-    // #endif
-    // std::cout << "GPU: ";
-    // for(int i=0; i<gpu_timings.size(); ++i){
-    //     std::cout << " " << gpu_timings[i] << " (" << seq_timings[i]/gpu_timings[i] << ") |";
-    // }
-    // std::cout << "\n\n";
-
+    std::vector<double> gpu_timings;
+    #ifdef USE_CUDA
+    for(double i: similarities){
+        std::string refA = generate_random_dna(size);
+        std::string refB = generate_similar_dna(size, i, refA);  
+        auto start_cuda = std::chrono::high_resolution_clock::now();
+        auto cuda_result = CUDAlign(refA, refB, -1, 1, -2);
+        auto end_cuda = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double> duration_cuda = end_cuda - start_cuda;
+        gpu_timings.push_back(duration_cuda.count());
+    }
+    #endif
+    std::cout << "GPU: ";
+    for(int i=0; i<gpu_timings.size(); ++i){
+        std::cout << " " << gpu_timings[i] << " (" << seq_timings[i]/gpu_timings[i] << ") |";
+    }
+    std::cout << "\n\n";
+    }
+    if (mode == "memory") {
+        size_t length_seq = 14;
+        auto refA = generate_random_dna(1<<length_seq);
+        auto refB = generate_random_dna(1<<length_seq);
+        auto nw_dp = needleman_wunsh_dp(refA, refB, -1, 1, -2);
+        print_memory_usage(); 
+    }
     return 0;
 }

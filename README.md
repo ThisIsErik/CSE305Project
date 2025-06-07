@@ -26,9 +26,21 @@ make        # Default build
 make cpu    # CPU-only build
 ```
 ## 🚀 Running the Project
-After building, run the executable:
+After building, run the executable with a specific mode:
+
 ```bash
-./run        # Run the default build
-# or
-./run_cpu    # Run the CPU-only build
+./run <mode>         # For default build
+./run_cpu <mode>     # For CPU-only build
 ```
+
+Available Modes:
+
+corectness – Runs basic correctness checks for all algorithms.
+
+thread – Benchmarks performance as a function of thread count.
+
+size – Measures runtime and speedup as input size increases.
+
+similarity – Compares performance for different sequence similarities.
+
+memory – Measures memory usage (VmPeak and VmHWM) for selected algorithms.
