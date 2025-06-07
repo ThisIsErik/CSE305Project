@@ -8,6 +8,8 @@
 #include "utils/random_dna.h"
 #include <chrono>
 #include <functional>
+#include <iostream>
+#include <fstream>
 
 //Functions and their inputs:
 //GPU:
@@ -103,6 +105,27 @@ std::vector<double> function_test_similarity(Func func,
         times.push_back(time);
     }
     return times;
+}
+
+void print_memory_usage() {
+    std::ifstream status_file("/proc/self/status");
+    std::string line;
+    double vm_peak = 0.0, vm_hwm = 0.0;
+
+    while (std::getline(status_file, line)) {
+        if (line.find("VmPeak:") == 0) {
+            long kb;
+            sscanf(line.c_str(), "VmPeak: %ld kB", &kb);
+            vm_peak = kb / 1e6; // convert to GB
+        } else if (line.find("VmHWM:") == 0) {
+            long kb;
+            sscanf(line.c_str(), "VmHWM: %ld kB", &kb);
+            vm_hwm = kb / 1e6; // convert to GB
+        }
+    }
+
+    std::cout << "VmPeak: " << vm_peak << " GB\n";
+    std::cout << "VmHWM: " << vm_hwm << " GB\n";
 }
 
 
