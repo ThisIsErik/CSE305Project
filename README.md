@@ -35,7 +35,7 @@ After building, run the executable with a specific mode:
 
 Available Modes:
 
-corectness – Runs basic correctness checks for all algorithms.
+correctness – Runs basic correctness checks for all algorithms.
 
 thread – Benchmarks performance as a function of thread count.
 
