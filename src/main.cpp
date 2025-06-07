@@ -26,12 +26,12 @@
 int main(int argc, char* argv[]) {
     if (argc < 2) {
         std::cout << "Usage: ./run <mode>\n";
-        std::cout << "Available modes: corectness, thread, size, similarity, memory\n";
+        std::cout << "Available modes: correctness, thread, size, similarity, memory\n";
         return 1;
     }
     std::string mode = argv[1];
 
-    if (mode == "corectness") {
+    if (mode == "correctness") {
     //#################  Sanity check that sequential baselines works  #######################
     std::string A = "TAGC";
     std::string B = "TAGTC";
