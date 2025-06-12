@@ -177,7 +177,7 @@ int main(int argc, char* argv[]) {
     }
     if (mode == "thread") {
     /////////////////////// Number threads comparison ///////////////////////////////////////
-    std::vector<int> num_threads = {2,3,4};
+    std::vector<int> num_threads = {2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20};
     std::string refA = generate_random_dna(1<<15);
     std::string refB = generate_random_dna(1<<15);
     auto start_seq_sw = std::chrono::high_resolution_clock::now();
